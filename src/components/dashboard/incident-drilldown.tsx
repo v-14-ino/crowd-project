@@ -35,6 +35,7 @@ import { api, formatDateTime, timeAgo } from "@/lib/api-client";
 import { ISSUE_TYPE_LABELS, type IncidentDetail } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AuditTimeline } from "@/components/dashboard/audit-timeline";
 import {
   MapPin,
   Clock,
@@ -493,6 +494,15 @@ export function IncidentDrilldown({
                   Submit verification
                 </Button>
               </div>
+            </section>
+
+            {/* Audit timeline */}
+            <section className="rounded-lg border bg-card p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <History className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">Audit Timeline</h3>
+              </div>
+              <AuditTimeline incidentId={incidentId} />
             </section>
           </div>
         )}

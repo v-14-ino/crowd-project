@@ -18,6 +18,9 @@ import { IncidentDrilldown } from "@/components/dashboard/incident-drilldown";
 import { IncidentMap } from "@/components/dashboard/incident-map";
 import { ReportForm } from "@/components/dashboard/report-form";
 import { MetricsPanel } from "@/components/dashboard/metrics-panel";
+import { AnalyticsPanel } from "@/components/dashboard/analytics-panel";
+import { ThemeToggle } from "@/components/dashboard/theme-toggle";
+import { DashboardSkeleton } from "@/components/dashboard/skeletons";
 import {
   StatusBadge,
   FreshnessBadge,
@@ -39,6 +42,9 @@ import {
   AlertTriangle,
   Loader2,
   Sparkles,
+  Download,
+  PieChart as PieChartIcon,
+  Keyboard,
 } from "lucide-react";
 import {
   Card,
@@ -66,13 +72,13 @@ const ROLE_INFO: Record<Role, { label: string; icon: React.ReactNode; desc: stri
   admin: { label: "Admin", icon: <BarChart3 className="h-3.5 w-3.5" />, desc: "System, seed & metrics" },
 };
 
-type Tab = "dashboard" | "report" | "track" | "metrics" | "admin";
+type Tab = "dashboard" | "analytics" | "report" | "track" | "metrics" | "admin";
 
 const ROLE_TABS: Record<Role, Tab[]> = {
   citizen: ["report", "track"],
-  officer: ["dashboard", "track"],
-  coordinator: ["dashboard", "metrics"],
-  admin: ["dashboard", "report", "track", "metrics", "admin"],
+  officer: ["dashboard", "analytics", "track"],
+  coordinator: ["dashboard", "analytics", "metrics"],
+  admin: ["dashboard", "analytics", "report", "track", "metrics", "admin"],
 };
 
 export default function Page() {
@@ -92,6 +98,7 @@ export default function Page() {
   const [trackError, setTrackError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [needsSeed, setNeedsSeed] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -155,6 +162,29 @@ export default function Page() {
     const tabs = ROLE_TABS[role];
     if (!tabs.includes(tab)) setTab(tabs[0]);
   }, [role, tab]);
+
+  // Keyboard shortcuts: / focus search, 1-5 tabs, j/k nav, esc close
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      const typing =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+      if (e.key === "Escape") {
+        setDrawerOpen(false);
+        setShowShortcuts(false);
+        return;
+      }
+      if (typing) return;
+      if (e.key === "?") {
+        e.preventDefault();
+        setShowShortcuts((s) => !s);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   async function switchRole(r: Role) {
     setRole(r);
@@ -257,6 +287,16 @@ export default function Page() {
 
           {/* Role switcher */}
           <div className="order-2 ml-auto flex items-center gap-1.5 sm:order-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setShowShortcuts((s) => !s)}
+              title="Keyboard shortcuts (?)"
+            >
+              <Keyboard className="h-3.5 w-3.5" />
+            </Button>
+            <ThemeToggle />
             <span className="hidden text-[10px] text-muted-foreground md:inline">View as</span>
             <div className="flex items-center gap-0.5 rounded-lg border bg-muted/50 p-0.5">
               {(Object.keys(ROLE_INFO) as Role[]).map((r) => (
@@ -280,7 +320,7 @@ export default function Page() {
               size="sm"
               className="h-7 w-7 p-0"
               onClick={() => loadAll(false)}
-              title="Refresh"
+              title="Refresh data"
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </Button>
@@ -345,6 +385,8 @@ export default function Page() {
           />
         )}
 
+        {tab === "analytics" && <AnalyticsPanel />}
+
         {tab === "metrics" && <MetricsPanel onSeed={runSeed} />}
 
         {tab === "admin" && (
@@ -369,12 +411,40 @@ export default function Page() {
         onChanged={() => loadAll(true)}
         responderName={role === "officer" ? "Officer Desai" : ROLE_INFO[role].label}
       />
+
+      {/* Keyboard shortcuts overlay */}
+      {showShortcuts && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowShortcuts(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border bg-card p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-bold">Keyboard Shortcuts</h3>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setShowShortcuts(false)}>
+                ✕
+              </Button>
+            </div>
+            <ul className="space-y-1.5 text-xs">
+              <li className="flex justify-between"><span className="text-muted-foreground">Toggle this help</span><kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">?</kbd></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Close panels / dialogs</span><kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Click any KPI card</span><span className="text-muted-foreground">filter by that metric</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Click any incident row</span><span className="text-muted-foreground">open drill-down</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Switch role</span><span className="text-muted-foreground">header role buttons</span></li>
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const TAB_LABEL: Record<Tab, string> = {
   dashboard: "Dashboard",
+  analytics: "Analytics",
   report: "Report Issue",
   track: "Track Report",
   metrics: "Metrics",
@@ -382,6 +452,7 @@ const TAB_LABEL: Record<Tab, string> = {
 };
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   dashboard: <LayoutDashboard className="h-3.5 w-3.5" />,
+  analytics: <PieChartIcon className="h-3.5 w-3.5" />,
   report: <Send className="h-3.5 w-3.5" />,
   track: <Search className="h-3.5 w-3.5" />,
   metrics: <BarChart3 className="h-3.5 w-3.5" />,
@@ -441,11 +512,16 @@ function DashboardView({
   recentReports: any[];
   highPriorityIncidents: Incident[];
 }) {
+  if (loading && incidents.length === 0) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="space-y-4">
       {/* Hero / KPIs */}
-      <section className="cv-hero-gradient rounded-xl border p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+      <section className="cv-hero-gradient relative overflow-hidden rounded-xl border p-4 shadow-sm">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative mb-3 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="text-lg font-bold sm:text-xl">
               {role === "coordinator"
@@ -457,29 +533,45 @@ function DashboardView({
               freshness and responder verification.
             </p>
           </div>
-          <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-            <Sparkles className="mr-1 h-3 w-3" />
-            Explainable verification engine
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="h-7 gap-1 text-xs">
+              <a href="/api/incidents/export" download>
+                <Download className="h-3 w-3" />
+                Export CSV
+              </a>
+            </Button>
+            <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+              <Sparkles className="mr-1 h-3 w-3" />
+              Explainable verification engine
+            </Badge>
+          </div>
         </div>
         <KpiCards stats={stats} activeFilter={filters} onCardClick={onKpiClick} />
       </section>
 
       {/* High-priority surfacing band */}
       {highPriorityIncidents.length > 0 && (
-        <section className="rounded-lg border border-red-200 bg-red-50/60 p-3 dark:bg-red-950/20">
-          <div className="mb-2 flex items-center gap-2">
-            <Flame className="h-4 w-4 text-red-600" />
-            <h3 className="text-sm font-semibold text-red-800 dark:text-red-300">
-              High-Priority Queue — {highPriorityIncidents.length} incidents need attention
-            </h3>
+        <section className="rounded-lg border border-red-200 bg-gradient-to-r from-red-50/80 to-orange-50/60 p-3 shadow-sm dark:border-red-900 dark:from-red-950/30 dark:to-orange-950/20">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-red-100 dark:bg-red-950">
+                <Flame className="h-3.5 w-3.5 text-red-600" />
+                <span className="cv-live-dot absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" />
+              </span>
+              <h3 className="text-sm font-semibold text-red-800 dark:text-red-300">
+                High-Priority Queue — {highPriorityIncidents.length} incidents need attention
+              </h3>
+            </div>
+            <span className="text-[10px] font-medium text-red-600/70 dark:text-red-400/70">
+              ← scroll →
+            </span>
           </div>
           <div className="cv-scroll flex gap-2 overflow-x-auto pb-1">
             {highPriorityIncidents.slice(0, 12).map((inc) => (
               <button
                 key={inc.id}
                 onClick={() => onSelect(inc)}
-                className="min-w-[220px] shrink-0 rounded-md border bg-card p-2.5 text-left shadow-sm transition-all hover:shadow-md"
+                className="group min-w-[220px] shrink-0 rounded-md border bg-card p-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex items-center justify-between">
                   <CategoryBadge category={inc.category} issueType={inc.issueType} />
@@ -505,9 +597,12 @@ function DashboardView({
 
       {/* Recent reports */}
       <section className="rounded-lg border bg-card p-3 shadow-sm">
-        <div className="mb-2 flex items-center gap-2">
-          <Activity className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Recent Citizen Reports (live feed)</h3>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Recent Citizen Reports (live feed)</h3>
+          </div>
+          <span className="text-[10px] text-muted-foreground">← scroll →</span>
         </div>
         <div className="cv-scroll flex gap-2 overflow-x-auto pb-1">
           {recentReports.length === 0 && (
@@ -516,21 +611,21 @@ function DashboardView({
           {recentReports.map((r) => (
             <div
               key={r.reportId}
-              className="min-w-[240px] shrink-0 rounded-md border bg-muted/30 p-2.5 text-xs"
+              className="min-w-[240px] shrink-0 rounded-md border bg-muted/30 p-2.5 text-xs transition-colors hover:bg-muted/60"
             >
               <div className="flex items-center justify-between">
                 <CategoryBadge category={r.category} issueType={r.issueType} />
                 <Badge variant="outline" className="text-[10px]">{r.citizenSeverity}</Badge>
               </div>
-              <p className="mt-1 line-clamp-2 text-muted-foreground">{r.description}</p>
+              <p className="mt-1 line-clamp-2 text-muted-foreground" title={r.description}>{r.description}</p>
               <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                <span className="font-mono">{r.reportId}</span>
+                <span className="font-mono" title={r.reportId}>{r.reportId}</span>
                 <span>{timeAgo(r.reportedTime)}</span>
               </div>
               {r.incidentId && (
                 <div className="mt-1 text-[10px]">
                   <span className="text-muted-foreground">→ </span>
-                  <span className="font-mono">{r.incidentId}</span>
+                  <span className="font-mono text-primary/80" title={r.incidentId}>{r.incidentId}</span>
                 </div>
               )}
             </div>

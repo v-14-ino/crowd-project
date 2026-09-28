@@ -104,3 +104,71 @@ Stage Summary:
 - Dev server: http://localhost:3000 (port 3000)
 - To re-seed: POST /api/seed or click "Seed demo data" in the top status bar
 - Unresolved: none blocking. Potential future enhancements: real Leaflet map, NextAuth JWT, PostgreSQL, evidence file upload UI.
+
+---
+Task ID: CRON-R1 (webDevReview round 1)
+Agent: main
+Task: QA assessment + bug fixes + new features + styling enhancements
+
+Work Log:
+- Reviewed worklog.md (project was at 100% complete from prior phase)
+- Performed QA via agent-browser: dashboard, drill-down, metrics, role switching all verified working, no console errors
+- Ran VLM analysis on screenshots: dashboard 6/10, drilldown 7/10, metrics tab broken (2/10 due to "Failed to fetch" when server restarted between calls)
+- Identified issues: (1) Metrics tab shows "Failed to fetch" with no retry on transient errors, (2) horizontal scroll truncation without indicators, (3) low-contrast secondary text, (4) missing charts/analytics, (5) no dark mode, (6) no export
+
+Implemented bug fixes:
+- Metrics panel: added auto-retry (up to 2x with 1.5s delay) on fetch errors + explicit Retry button + graceful error state with seed option
+- Replaced inline loading skeletons with dedicated MetricsSkeleton component
+- Dashboard: added skeleton loading state (DashboardSkeleton) for initial load
+- Improved contrast on secondary text (font-mono with title tooltips, text-primary/80 for incident IDs)
+
+Implemented new features:
+1. Analytics tab (AnalyticsPanel) with 7 recharts visualizations:
+   - Incident Trend (7-day area chart)
+   - Reports by Category (bar chart)
+   - Verification Status (donut pie)
+   - Priority Distribution (horizontal bar)
+   - Freshness Mix (radial bar)
+   - Incidents by Zone (bar chart)
+   - Evidence & Responder Coverage (4 SVG progress rings)
+2. Dark mode toggle (ThemeToggle via next-themes, cycles light→dark→system)
+3. CSV export button (downloads /api/incidents/export)
+4. Audit timeline in drill-down (AuditTimeline component with vertical timeline, action icons, timestamps)
+5. Keyboard shortcuts overlay (press ? to toggle, Esc to close)
+6. Skeleton loaders (DashboardSkeleton, MetricsSkeleton)
+
+New API endpoints:
+- GET /api/analytics — aggregated distributions (category, status, priority, freshness, zone, confidence buckets, 7-day trend, evidence coverage)
+- GET /api/incidents/export — CSV download of all incidents
+- GET /api/incidents/[id]/audit — audit log entries for an incident
+
+Styling enhancements:
+- Hero section: added blur gradient orb, relative positioning, Export CSV + badge
+- High-priority queue: gradient background, pulsing live dot on flame icon, hover lift (-translate-y-0.5), focus-visible ring, scroll indicator
+- Recent reports: hover bg transition, tooltips on truncated text, primary-tinted incident IDs
+- Theme toggle + keyboard shortcuts button in header
+- Improved dark mode color tokens throughout
+
+Verification (VLM ratings after enhancements):
+- Dashboard: 8.5/10 (up from 6/10)
+- Analytics charts: 9/10 (rendering, layout, readability)
+- Metrics tab: 9/10 (up from 2/10 broken — now fully functional with retry)
+- Drill-down: includes Audit Timeline section with action icons + timestamps
+- Lint: 0 errors
+- Tests: 29/29 pass
+- No console errors
+
+Stage Summary:
+- All QA issues fixed; metrics tab now recovers from transient fetch failures
+- 4 major new features added (analytics, dark mode, CSV export, audit timeline)
+- Significant styling improvements (gradients, hover states, skeletons, scroll indicators, tooltips)
+- VLM-confirmed visual polish ratings: dashboard 8.5/10, analytics 9/10, metrics 9/10
+- Project remains fully demo-ready with enhanced feature set
+- Dev server running on port 3000
+
+Unresolved / next-phase recommendations:
+- Add real-time WebSocket updates (currently 15s polling)
+- Implement evidence file upload UI (API accepts uploads but UI uses simulated sources)
+- Add date-range filter for analytics trend
+- Consider adding a "compare scenarios" view for the metrics dashboard
+- Could add Leaflet/OpenStreetMap for a real spatial map (currently SVG scatter)

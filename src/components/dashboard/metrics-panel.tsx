@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
+import { MetricsSkeleton } from "@/components/dashboard/skeletons";
 import {
   CheckCircle2,
   XCircle,
@@ -25,6 +25,7 @@ import {
   Sparkles,
   Database,
   PlayCircle,
+  RefreshCw,
 } from "lucide-react";
 
 interface Metrics {
@@ -69,15 +70,21 @@ export function MetricsPanel({ onSeed }: { onSeed?: () => void }) {
   const [data, setData] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  function load() {
+  const load = React.useCallback(() => {
     setLoading(true);
     setError(null);
     api<Metrics>("/api/metrics")
-      .then(setData)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(e.message);
+        setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -97,28 +104,38 @@ export function MetricsPanel({ onSeed }: { onSeed?: () => void }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryCount]);
+
+  // Auto-retry once on transient fetch errors (e.g. dev server restarted)
+  useEffect(() => {
+    if (error && retryCount < 2) {
+      const t = setTimeout(() => setRetryCount((c) => c + 1), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [error, retryCount]);
 
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 w-full" />
-        ))}
-      </div>
-    );
+    return <MetricsSkeleton />;
   }
 
   if (error || !data) {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-sm text-rose-600">{error || "Unable to load metrics"}</p>
-          {onSeed && (
-            <Button className="mt-3" onClick={onSeed}>
-              <Database className="mr-1 h-4 w-4" /> Seed reproducible experiment
+          <p className="text-sm text-rose-600">
+            {error || "Unable to load metrics"}
+          </p>
+          <div className="mt-3 flex justify-center gap-2">
+            <Button onClick={() => setRetryCount((c) => c + 1)} variant="default" size="sm">
+              <RefreshCw className="mr-1 h-3.5 w-3.5" />
+              Retry
             </Button>
-          )}
+            {onSeed && (
+              <Button onClick={onSeed} variant="outline" size="sm">
+                <Database className="mr-1 h-4 w-4" /> Seed experiment
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
