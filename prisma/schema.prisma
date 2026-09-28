@@ -1,0 +1,180 @@
+// Crowd-Report Verification and Confidence Dashboard — Prisma schema
+// Ported faithfully from the original SQLAlchemy models and extended with
+// audit logging for verification history and explicit operational states.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users & roles
+// ---------------------------------------------------------------------------
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  role         String   @default("citizen") // citizen | officer | coordinator | admin
+  zone         String?  // area of responsibility for officers/coordinators
+  isActive     Boolean  @default(true)
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  verifications ResponderVerification[]
+  auditLogs     AuditLog[]
+}
+
+// ---------------------------------------------------------------------------
+// Citizen reports
+// ---------------------------------------------------------------------------
+model Report {
+  id                  String   @id @default(cuid())
+  reportId            String   @unique // RPT-XXXXXXXXXXXX
+  category            String   // Roads | Street Lighting | Waste
+  issueType           String   // pothole | damaged_road | road_blockage | streetlight_not_working | damaged_light | dark_area | garbage_accumulation | overflowing_bin | illegal_dumping
+  description         String?
+  zone                String?
+  latitude            Float?
+  longitude           Float?
+  reportedTime        DateTime
+  citizenSeverity     String   // Low | Medium | High | Critical
+  citizenName         String?
+  corroboratingReports Int?
+  locationStatus      String?  // Available | Missing
+  freshnessStatus     String?  // Fresh | Aging | Stale | Pending
+  conflictingEvidence String?  // yes | no
+  reporterId          String?
+  createdAt           DateTime @default(now())
+
+  incidentLinks IncidentReport[]
+  evidence      ExternalEvidence[]
+  evaluation    EvaluationLabel?
+}
+
+// ---------------------------------------------------------------------------
+// Incidents (grouped reports)
+// ---------------------------------------------------------------------------
+model Incident {
+  id                     String    @id @default(cuid())
+  incidentId             String    @unique // INC-XXXXXXXXXXXX
+  category               String
+  issueType              String
+  zone                   String?
+  status                 String    @default("Pending") // Verified | Rejected | Conflicted | Corroborated | Pending | Unknown
+  humanStatus            String    @default("Awaiting Review")
+  priorityScore          Int       @default(0)
+  priorityLevel          String    @default("Low")
+  confidenceScore        Int       @default(0)
+  confidenceLevel        String    @default("Low")
+  freshnessStatus        String    @default("Fresh")
+  totalReportsCount      Int       @default(1)
+  independentReportsCount Int      @default(1)
+  duplicateReportsCount Int       @default(0)
+  latitude               Float?
+  longitude              Float?
+  lastReportedTime       DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  incidentLinks         IncidentReport[]
+  evidence              ExternalEvidence[]
+  responderVerifications ResponderVerification[]
+  auditLogs             AuditLog[]
+}
+
+model IncidentReport {
+  id         String   @id @default(cuid())
+  incidentId String
+  reportId   String
+  createdAt  DateTime @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  report   Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId]) // a report belongs to exactly one incident
+}
+
+// ---------------------------------------------------------------------------
+// Evidence
+// ---------------------------------------------------------------------------
+model ExternalEvidence {
+  id             String    @id @default(cuid())
+  evidenceId     String    @unique // EVD-XXXXXXXX
+  incidentId     String
+  reportId       String?
+  sourceType     String    // Citizen photo | CCTV | Sensor | Drone | Field officer
+  sourceStatus   String    // Standard | High Quality | Verified | Corrupted | Missing
+  observedAt     DateTime
+  freshnessStatus String?
+  details        String?
+  fileName       String?
+  filePath       String?
+  fileUrl        String?
+  fileSize       Int?
+  mimeType       String?
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime  @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  report   Report?  @relation(fields: [reportId], references: [id], onDelete: SetNull)
+}
+
+// ---------------------------------------------------------------------------
+// Responder verification (Verify / Reject / Needs More Evidence)
+// ---------------------------------------------------------------------------
+model ResponderVerification {
+  id                 String   @id @default(cuid())
+  incidentId         String
+  responderId        String?
+  responderName      String
+  verificationStatus String   // Verified | Rejected | Needs More Evidence
+  notes              String?
+  verifiedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
+
+  incident  Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  responder User?    @relation(fields: [responderId], references: [id], onDelete: SetNull)
+}
+
+// ---------------------------------------------------------------------------
+// Evaluation labels (ground truth + simulated scores) for the metrics dashboard
+// ---------------------------------------------------------------------------
+model EvaluationLabel {
+  id                          String   @id @default(cuid())
+  reportId                    String   @unique
+  incidentId                  String?
+  groundTruthVerified         Boolean? // true high-priority, false low-priority
+  groundTruthCategory         String?  // normal | duplicate | stale | missing_location | conflicting_evidence | missing_evidence | responder_rejected
+  simulatedConfidenceScore    Float?
+  simulatedVerificationState   String?
+  simulatedPriorityScore      Float?
+  simulatedPriority           String?
+  baselinePriorityScore       Float?   // severity+recency baseline
+  baselineRank                Int?
+  proposedRank                Int?
+  createdAt                   DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Audit log (verification history / operational actions)
+// ---------------------------------------------------------------------------
+model AuditLog {
+  id        String   @id @default(cuid())
+  incidentId String?
+  actorId   String?
+  actorRole String?
+  action    String   // report_submitted | evidence_attached | responder_verified | status_changed | seed_run
+  details   String?
+  createdAt DateTime @default(now())
+
+  incident Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actor   User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
