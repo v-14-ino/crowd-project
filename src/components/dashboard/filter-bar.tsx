@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Search } from "lucide-react";
 import { CATEGORY_OPTIONS, ZONES, SEVERITY_OPTIONS } from "@/lib/types";
+import { SavedFilters } from "@/components/dashboard/saved-filters";
 
 interface FilterBarProps {
   filters: Record<string, string>;
@@ -49,6 +50,7 @@ export function FilterBar({
             Showing <span className="font-semibold text-foreground">{filteredCount}</span> of{" "}
             <span className="font-semibold text-foreground">{totalCount}</span> incidents
           </span>
+          <SavedFilters currentFilters={filters} onLoad={(f) => Object.entries(f).forEach(([k, v]) => onFilterChange(k, v))} />
           <Button variant="outline" size="sm" onClick={onReset}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" />
             Reset

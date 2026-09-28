@@ -36,6 +36,7 @@ import { ISSUE_TYPE_LABELS, type IncidentDetail } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
+import { IncidentTimeline } from "@/components/dashboard/incident-timeline";
 import {
   MapPin,
   Clock,
@@ -612,6 +613,9 @@ export function IncidentDrilldown({
                 </Button>
               </div>
             </section>
+
+            {/* Corroboration timeline chart */}
+            {detail && <IncidentTimeline detail={detail} />}
 
             {/* Audit timeline */}
             <section className="rounded-lg border bg-card p-4">
