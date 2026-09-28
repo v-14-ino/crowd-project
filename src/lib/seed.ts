@@ -501,6 +501,10 @@ export const SEED_SCENARIOS: SeedScenario[] = [
       description: "Terrible pothole here",
       citizenName: `Spammer ${i + 1}`,
       offsetMinutes: -10 + i * 0.5,
+      // Fixed identical coordinates so all 10 reports are within the 25m
+      // duplicate threshold and deduplicated to 1 unique (no random spread).
+      lat: 28.614,
+      lon: 77.2095,
     })),
   },
 

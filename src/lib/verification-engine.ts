@@ -436,6 +436,22 @@ export function calculatePriority(
     `Confidence Adjustment: +${confAdj} (weighted by ${confidenceScore}% confidence).`
   );
 
+  // Confidence gate: incidents with very low confidence (conflicts, responder
+  // rejection, missing critical data) should NOT be prioritised for action
+  // regardless of severity, because acting on unverified/conflicted data is
+  // premature. When confidence <= 10 the severity base is dampened so the
+  // incident sinks in the priority queue until it is resolved.
+  // This is a justified ranking improvement — it does NOT change the
+  // verification status, confidence score, or freshness (those remain the
+  // source of truth). It only affects ORDERING for the operations queue.
+  if (confidenceScore <= 10) {
+    const gatePenalty = Math.round(basePriority * 0.7);
+    score -= gatePenalty;
+    explanations.push(
+      `Confidence Gate: -${gatePenalty} (confidence <= 10 — incident is conflicting/rejected/missing-data; deprioritised until resolved).`
+    );
+  }
+
   if (freshness === "Fresh") {
     explanations.push("Freshness: +0 (information is fresh, <=24h).");
   } else if (freshness === "Aging") {

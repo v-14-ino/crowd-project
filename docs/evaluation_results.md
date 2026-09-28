@@ -1,7 +1,7 @@
 # Experimental Evaluation Results
 
 > **Reproducible**: regenerate with `bunx tsx scripts/evaluate.ts --reseed`.
-> Generated: 2026-09-28T10:41:53.180Z
+> Generated: 2026-09-28T11:01:22.619Z
 > Dataset: 19 incidents, 42 reports, 10 ground-truth-high, 9 ground-truth-low.
 
 ## Methodology
@@ -19,26 +19,26 @@ The evaluation runs the **verification engine** against the reproducible simulat
 
 | Metric | Target | Baseline (severity+recency) | Prototype (verification engine) | Target met? |
 |--------|--------|------------------------------|----------------------------------|-------------|
-| Precision@10 | ≥ 80% | 50.0% | 60.0% | No |
+| Precision@10 | ≥ 80% | 50.0% | 100.0% | Yes |
 | Precision@20 | ≥ 75% | 52.6% | 52.6% | No |
 | Recall@20 | ≥ 80% | 100.0% | 100.0% | Yes |
-| F1@10 | ≥ 80% | — | 60.0% | No |
+| F1@10 | ≥ 80% | — | 100.0% | Yes |
 | High-pri detection | ≥ 80% | — | 80.0% | Yes |
-| Total latency | ≤ 2.0s | — | 0.0003s | Yes |
+| Total latency | ≤ 2.0s | — | 0.0014s | Yes |
 | Explainability | 100% | — | 100% | Yes |
 
 ## Verification Decision Metrics (confidence ≥ 70 threshold)
 
 | Metric | Value |
 |--------|-------|
-| True positives (TP) | 1 |
-| False positives (FP) | 1 |
-| False negatives (FN) | 9 |
-| True negatives (TN) | 8 |
-| Precision | 50.0% |
-| Recall | 10.0% |
-| F1 | 16.7% |
-| Accuracy | 47.4% |
+| True positives (TP) | 3 |
+| False positives (FP) | 0 |
+| False negatives (FN) | 7 |
+| True negatives (TN) | 9 |
+| Precision | 100.0% |
+| Recall | 30.0% |
+| F1 | 46.2% |
+| Accuracy | 63.2% |
 
 ## Precision–Recall Threshold Sweep
 
@@ -48,13 +48,13 @@ Confidence threshold sweep (0–100, step 10). The operational threshold of **70
 |-----------|----|----|----|----|-----------|--------|-----|
 | 0 | 10 | 9 | 0 | 0 | 52.6% | 100.0% | 69.0% |
 | 10 | 10 | 6 | 0 | 3 | 62.5% | 100.0% | 76.9% |
-| 20 | 9 | 1 | 1 | 8 | 90.0% | 90.0% | 90.0% |
-| 30 | 9 | 1 | 1 | 8 | 90.0% | 90.0% | 90.0% |
-| 40 | 6 | 1 | 4 | 8 | 85.7% | 60.0% | 70.6% |
-| 50 | 5 | 1 | 5 | 8 | 83.3% | 50.0% | 62.5% |
-| 60 | 5 | 1 | 5 | 8 | 83.3% | 50.0% | 62.5% |
-| 70 | 1 | 1 | 9 | 8 | 50.0% | 10.0% | 16.7% |
-| 80 | 1 | 0 | 9 | 9 | 100.0% | 10.0% | 18.2% |
+| 20 | 10 | 0 | 0 | 9 | 100.0% | 100.0% | 100.0% |
+| 30 | 9 | 0 | 1 | 9 | 100.0% | 90.0% | 94.7% |
+| 40 | 5 | 0 | 5 | 9 | 100.0% | 50.0% | 66.7% |
+| 50 | 5 | 0 | 5 | 9 | 100.0% | 50.0% | 66.7% |
+| 60 | 5 | 0 | 5 | 9 | 100.0% | 50.0% | 66.7% |
+| 70 | 3 | 0 | 7 | 9 | 100.0% | 30.0% | 46.2% |
+| 80 | 3 | 0 | 7 | 9 | 100.0% | 30.0% | 46.2% |
 | 90 | 1 | 0 | 9 | 9 | 100.0% | 10.0% | 18.2% |
 | 100 | 1 | 0 | 9 | 9 | 100.0% | 10.0% | 18.2% |
 
@@ -62,16 +62,16 @@ Confidence threshold sweep (0–100, step 10). The operational threshold of **70
 
 | | Baseline | Prototype |
 |--|----------|-----------|
-| Mean rank of true-high incidents | 9.4 | 8.5 |
-| Median rank of true-high incidents | 10.5 | 9.5 |
+| Mean rank of true-high incidents | 9.4 | 5.5 |
+| Median rank of true-high incidents | 10.5 | 5.5 |
 
 ## Latency
 
 | | Value |
 |--|-------|
-| Total evaluation latency | 0.0003 s |
-| Average per incident | 0.0173 ms |
-| Median per incident | 0.0094 ms |
+| Total evaluation latency | 0.0014 s |
+| Average per incident | 0.0715 ms |
+| Median per incident | 0.0318 ms |
 
 ## Freshness Classification Accuracy
 
@@ -81,43 +81,41 @@ Confidence threshold sweep (0–100, step 10). The operational threshold of **70
 
 | Rank | Incident | Category | Zone | GT | Baseline | Prototype | Conf | Status |
 |------|----------|----------|------|----|----------|-----------|------|--------|
-| 1 | INC-3ECAD40B6385 | Roads/pothole | Central Zone | duplicate | 100 | 100 | 70 | Corroborated |
-| 2 | INC-77079CA5D73B | Roads/pothole | Central Zone | HIGH | 100 | 87 | 60 | Pending |
-| 3 | INC-372BED867957 | Roads/road_blockage | North Zone | HIGH | 100 | 87 | 60 | Pending |
-| 4 | INC-5BC6519F407D | Roads/pothole | North Zone | HIGH | 100 | 87 | 60 | Pending |
-| 5 | INC-8264AAAAD554 | Roads/pothole | West Zone | conflicting_evidence | 100 | 75 | 0 | Conflicted |
-| 6 | INC-03D2A25DFD67 | Street Lighting/streetlight_not_working | Old Town | HIGH | 80 | 70 | 100 | Verified |
-| 7 | INC-3F7E022A324C | Waste/illegal_dumping | Industrial Park | responder_rejected | 100 | 70 | 0 | Rejected |
-| 8 | INC-4601DF6B7563 | Street Lighting/dark_area | North Zone | missing_location | 100 | 70 | 0 | Unknown |
-| 9 | INC-DDA231B00328 | Waste/overflowing_bin | Central Zone | HIGH | 80 | 67 | 60 | Pending |
-| 10 | INC-6CE4CABF94F5 | Street Lighting/dark_area | East Zone | HIGH | 80 | 64 | 45 | Pending |
-| 11 | INC-E0535B0DBB0C | Roads/damaged_road | South Zone | HIGH | 80 | 61 | 30 | Pending |
-| 12 | INC-7E9CD8D3F7FF | Street Lighting/damaged_light | West Zone | HIGH | 80 | 61 | 30 | Pending |
-| 13 | INC-1F1869AC018A | Waste/garbage_accumulation | Industrial Park | HIGH | 80 | 52 | 10 | Pending |
-| 14 | INC-2AE04586C211 | Roads/damaged_road | South Zone | stale | 100 | 42 | 10 | Pending |
-| 15 | INC-6F253A3F73AE | Waste/overflowing_bin | Harbor District | HIGH | 60 | 41 | 30 | Pending |
-| 16 | INC-F8E28837E11F | Waste/overflowing_bin | Harbor District | missing_evidence | 60 | 32 | 10 | Pending |
-| 17 | INC-C07FDC6ED290 | Roads/pothole | South Zone | normal | 40 | 12 | 10 | Pending |
-| 18 | INC-05884D8905CE | Street Lighting/streetlight_not_working | East Zone | normal | 40 | 12 | 10 | Pending |
-| 19 | INC-EB023D5DCA8E | Waste/garbage_accumulation | Central Zone | normal | 40 | 12 | 10 | Pending |
+| 1 | INC-86B7FE437043 | Roads/road_blockage | North Zone | HIGH | 100 | 96 | 80 | Corroborated |
+| 2 | INC-29DAE86CC0C7 | Roads/pothole | North Zone | HIGH | 100 | 96 | 80 | Corroborated |
+| 3 | INC-030C2D742186 | Roads/pothole | Central Zone | HIGH | 100 | 87 | 60 | Pending |
+| 4 | INC-E0A57A000571 | Street Lighting/streetlight_not_working | Old Town | HIGH | 80 | 75 | 100 | Verified |
+| 5 | INC-A51052D9C4F8 | Waste/overflowing_bin | Central Zone | HIGH | 80 | 67 | 60 | Pending |
+| 6 | INC-A4E3327B6421 | Roads/damaged_road | South Zone | HIGH | 80 | 61 | 30 | Pending |
+| 7 | INC-25BC8204D8FD | Waste/garbage_accumulation | Industrial Park | HIGH | 80 | 61 | 30 | Pending |
+| 8 | INC-CCBC0C3C124D | Street Lighting/damaged_light | West Zone | HIGH | 80 | 61 | 30 | Pending |
+| 9 | INC-B614DD25D63A | Street Lighting/dark_area | East Zone | HIGH | 80 | 55 | 25 | Pending |
+| 10 | INC-F4D7B346A681 | Waste/overflowing_bin | Harbor District | HIGH | 60 | 41 | 30 | Pending |
+| 11 | INC-3830CAFF389C | Roads/pothole | West Zone | conflicting_evidence | 100 | 26 | 0 | Conflicted |
+| 12 | INC-AD0448BB6416 | Roads/pothole | Central Zone | duplicate | 100 | 23 | 10 | Pending |
+| 13 | INC-93B183173DB5 | Waste/illegal_dumping | Industrial Park | responder_rejected | 100 | 21 | 0 | Rejected |
+| 14 | INC-1239553F54E0 | Street Lighting/dark_area | North Zone | missing_location | 100 | 21 | 0 | Unknown |
+| 15 | INC-5A4CD75E35ED | Waste/overflowing_bin | Harbor District | missing_evidence | 60 | 11 | 10 | Pending |
+| 16 | INC-86556EA8C8E2 | Roads/pothole | South Zone | normal | 40 | 5 | 10 | Pending |
+| 17 | INC-35331367A844 | Street Lighting/streetlight_not_working | East Zone | normal | 40 | 5 | 10 | Pending |
+| 18 | INC-98CE3491BF6F | Waste/garbage_accumulation | Central Zone | normal | 40 | 5 | 10 | Pending |
+| 19 | INC-14F9597CFBB8 | Roads/damaged_road | South Zone | stale | 100 | 0 | 10 | Pending |
 
 ## Error Analysis
 
 ### False positives (ground-truth-low but confidence ≥ 70)
 
-- `INC-3ECAD40B6385` — duplicate — status Corroborated — confidence 70
+None.
 
 ### False negatives (ground-truth-high but confidence < 70)
 
-- `INC-77079CA5D73B` — status Pending — confidence 60
-- `INC-372BED867957` — status Pending — confidence 60
-- `INC-5BC6519F407D` — status Pending — confidence 60
-- `INC-DDA231B00328` — status Pending — confidence 60
-- `INC-6CE4CABF94F5` — status Pending — confidence 45
-- `INC-E0535B0DBB0C` — status Pending — confidence 30
-- `INC-7E9CD8D3F7FF` — status Pending — confidence 30
-- `INC-1F1869AC018A` — status Pending — confidence 10
-- `INC-6F253A3F73AE` — status Pending — confidence 30
+- `INC-030C2D742186` — Roads/pothole — expected HIGH_PRIORITY, predicted Pending — confidence 60, priority 87, evidence 1, corroboration 2, freshness Fresh, responder no — **reason**: only 2 independent report(s) — below corroboration threshold
+- `INC-A51052D9C4F8` — Waste/overflowing_bin — expected HIGH_PRIORITY, predicted Pending — confidence 60, priority 67, evidence 1, corroboration 2, freshness Fresh, responder no — **reason**: only 2 independent report(s) — below corroboration threshold
+- `INC-A4E3327B6421` — Roads/damaged_road — expected HIGH_PRIORITY, predicted Pending — confidence 30, priority 61, evidence 0, corroboration 2, freshness Fresh, responder no — **reason**: low confidence (30) due to insufficient corroboration or evidence; no evidence attached; only 2 independent report(s) — below corroboration threshold
+- `INC-25BC8204D8FD` — Waste/garbage_accumulation — expected HIGH_PRIORITY, predicted Pending — confidence 30, priority 61, evidence 0, corroboration 2, freshness Fresh, responder no — **reason**: low confidence (30) due to insufficient corroboration or evidence; no evidence attached; only 2 independent report(s) — below corroboration threshold
+- `INC-CCBC0C3C124D` — Street Lighting/damaged_light — expected HIGH_PRIORITY, predicted Pending — confidence 30, priority 61, evidence 0, corroboration 2, freshness Fresh, responder no — **reason**: low confidence (30) due to insufficient corroboration or evidence; no evidence attached; only 2 independent report(s) — below corroboration threshold
+- `INC-B614DD25D63A` — Street Lighting/dark_area — expected HIGH_PRIORITY, predicted Pending — confidence 25, priority 55, evidence 1, corroboration 1, freshness Fresh, responder no — **reason**: low confidence (25) due to insufficient corroboration or evidence; only 1 independent report(s) — below corroboration threshold
+- `INC-F4D7B346A681` — Waste/overflowing_bin — expected HIGH_PRIORITY, predicted Pending — confidence 30, priority 41, evidence 0, corroboration 2, freshness Fresh, responder no — **reason**: low confidence (30) due to insufficient corroboration or evidence; no evidence attached; only 2 independent report(s) — below corroboration threshold
 
 ## Status
 
@@ -127,5 +125,5 @@ Confidence threshold sweep (0–100, step 10). The operational threshold of **70
 - **Ground truth**: CREATED (per-scenario `groundTruthVerified` label)
 - **Experiment**: RUN (this script)
 - **Results**: AVAILABLE (`scripts/evaluation_output.json`)
-- **Error analysis**: AVAILABLE (above)
-- **Stakeholder validation**: PENDING (see `docs/validation.md`)
+- **Error analysis**: AVAILABLE (above, with per-incident reasons)
+- **Stakeholder validation**: PENDING REAL-WORLD VALIDATION (see `docs/validation.md`)

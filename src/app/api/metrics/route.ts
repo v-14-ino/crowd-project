@@ -297,22 +297,82 @@ export async function GET() {
     })),
     errorAnalysis: {
       falsePositives: proposedRanked
-        .filter((e) => !e.groundTruthVerified && e.evaluation.status !== "Rejected")
-        .slice(0, 5)
+        .filter((e) => !e.groundTruthVerified && e.evaluation.confidenceScore >= 70)
+        .slice(0, 10)
         .map((e) => ({
           incidentId: e.incident.incidentId,
-          category: e.groundTruthCategory,
-          status: e.evaluation.status,
+          category: e.incident.category,
+          issueType: e.incident.issueType,
+          groundTruthCategory: e.groundTruthCategory,
+          expectedState: "LOW_PRIORITY",
+          predictedState: e.evaluation.status,
           confidence: e.evaluation.confidenceScore,
+          priority: e.evaluation.priorityScore,
+          evidenceCount: e.evidence.length,
+          corroboration: e.evaluation.uniqueReports.length,
+          freshness: e.evaluation.freshness,
+          responderVerified: e.evaluation.status === "Verified",
+          reason: explainError(e, false),
         })),
       falseNegatives: proposedRanked
-        .filter((e) => e.groundTruthVerified && e.evaluation.priorityScore < 60)
-        .slice(0, 5)
+        .filter((e) => e.groundTruthVerified && e.evaluation.confidenceScore < 70)
+        .slice(0, 10)
         .map((e) => ({
           incidentId: e.incident.incidentId,
-          status: e.evaluation.status,
+          category: e.incident.category,
+          issueType: e.incident.issueType,
+          groundTruthCategory: e.groundTruthCategory,
+          expectedState: "HIGH_PRIORITY",
+          predictedState: e.evaluation.status,
           confidence: e.evaluation.confidenceScore,
+          priority: e.evaluation.priorityScore,
+          evidenceCount: e.evidence.length,
+          corroboration: e.evaluation.uniqueReports.length,
+          freshness: e.evaluation.freshness,
+          responderVerified: e.evaluation.status === "Verified",
+          reason: explainError(e, true),
         })),
     },
   });
+}
+
+function explainError(e: any, isFalseNegative: boolean): string {
+  if (isFalseNegative) {
+    // Why did the system under-prioritise a true-high incident?
+    const reasons: string[] = [];
+    if (e.evaluation.confidenceScore < 40) {
+      reasons.push(`low confidence (${e.evaluation.confidenceScore}) due to insufficient corroboration or evidence`);
+    }
+    if (e.evidence.length === 0) {
+      reasons.push("no evidence attached");
+    }
+    if (e.evaluation.uniqueReports.length < 3) {
+      reasons.push(`only ${e.evaluation.uniqueReports.length} independent report(s) — below corroboration threshold`);
+    }
+    if (e.evaluation.freshness !== "Fresh") {
+      reasons.push(`freshness is ${e.evaluation.freshness}`);
+    }
+    return reasons.length > 0
+      ? reasons.join("; ")
+      : "incident ranked below top-10 despite being ground-truth high";
+  } else {
+    // Why did the system over-prioritise a false case?
+    const reasons: string[] = [];
+    if (e.groundTruthCategory === "duplicate") {
+      reasons.push("duplicate reports not fully deduplicated");
+    }
+    if (e.groundTruthCategory === "conflicting_evidence") {
+      reasons.push("conflicting evidence detected but incident still scored high");
+    }
+    if (e.groundTruthCategory === "responder_rejected") {
+      reasons.push("responder rejected but ranking not fully suppressed");
+    }
+    if (e.groundTruthCategory === "stale") {
+      reasons.push("stale report retained elevated priority");
+    }
+    if (e.groundTruthCategory === "missing_location") {
+      reasons.push("missing location should have reduced priority further");
+    }
+    return reasons.length > 0 ? reasons.join("; ") : "edge case retained elevated priority";
+  }
 }

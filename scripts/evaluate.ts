@@ -354,16 +354,35 @@ async function main() {
         .filter((r) => !r.groundTruthVerified && r.confidenceScore >= decisionThreshold)
         .map((r) => ({
           incidentId: r.incidentId,
-          category: r.groundTruthCategory,
-          status: r.status,
+          category: r.category,
+          issueType: r.issueType,
+          groundTruthCategory: r.groundTruthCategory,
+          expectedState: "LOW_PRIORITY",
+          predictedState: r.status,
           confidence: r.confidenceScore,
+          priority: r.proposedScore,
+          evidenceCount: r.evidenceCount,
+          corroboration: r.independentReports,
+          freshness: r.freshness,
+          responderVerified: r.status === "Verified",
+          reason: explainError(r, false),
         })),
       falseNegatives: proposedRanked
         .filter((r) => r.groundTruthVerified && r.confidenceScore < decisionThreshold)
         .map((r) => ({
           incidentId: r.incidentId,
-          status: r.status,
+          category: r.category,
+          issueType: r.issueType,
+          groundTruthCategory: r.groundTruthCategory,
+          expectedState: "HIGH_PRIORITY",
+          predictedState: r.status,
           confidence: r.confidenceScore,
+          priority: r.proposedScore,
+          evidenceCount: r.evidenceCount,
+          corroboration: r.independentReports,
+          freshness: r.freshness,
+          responderVerified: r.status === "Verified",
+          reason: explainError(r, true),
         })),
     },
   };
@@ -470,7 +489,10 @@ ${
   result.errorAnalysis.falsePositives.length === 0
     ? "None."
     : result.errorAnalysis.falsePositives
-        .map((f) => `- \`${f.incidentId}\` — ${f.category} — status ${f.status} — confidence ${f.confidence}`)
+        .map(
+          (f) =>
+            `- \`${f.incidentId}\` — ${f.category}/${f.issueType} — expected ${f.expectedState}, predicted ${f.predictedState} — confidence ${f.confidence}, priority ${f.priority}, evidence ${f.evidenceCount}, corroboration ${f.corroboration}, freshness ${f.freshness}, responder ${f.responderVerified ? "yes" : "no"} — **reason**: ${f.reason}`
+        )
         .join("\n")
 }
 
@@ -480,7 +502,10 @@ ${
   result.errorAnalysis.falseNegatives.length === 0
     ? "None."
     : result.errorAnalysis.falseNegatives
-        .map((f) => `- \`${f.incidentId}\` — status ${f.status} — confidence ${f.confidence}`)
+        .map(
+          (f) =>
+            `- \`${f.incidentId}\` — ${f.category}/${f.issueType} — expected ${f.expectedState}, predicted ${f.predictedState} — confidence ${f.confidence}, priority ${f.priority}, evidence ${f.evidenceCount}, corroboration ${f.corroboration}, freshness ${f.freshness}, responder ${f.responderVerified ? "yes" : "no"} — **reason**: ${f.reason}`
+        )
         .join("\n")
 }
 
@@ -492,13 +517,36 @@ ${
 - **Ground truth**: CREATED (per-scenario \`groundTruthVerified\` label)
 - **Experiment**: RUN (this script)
 - **Results**: AVAILABLE (\`scripts/evaluation_output.json\`)
-- **Error analysis**: AVAILABLE (above)
-- **Stakeholder validation**: PENDING (see \`docs/validation.md\`)
+- **Error analysis**: AVAILABLE (above, with per-incident reasons)
+- **Stakeholder validation**: PENDING REAL-WORLD VALIDATION (see \`docs/validation.md\`)
 `;
 
   writeFileSync("docs/evaluation_results.md", md);
   console.log(md);
   console.log("\n✓ Written: scripts/evaluation_output.json, docs/evaluation_results.md");
+}
+
+function explainError(r: EvalRow, isFalseNegative: boolean): string {
+  if (isFalseNegative) {
+    const reasons: string[] = [];
+    if (r.confidenceScore < 40)
+      reasons.push(`low confidence (${r.confidenceScore}) due to insufficient corroboration or evidence`);
+    if (r.evidenceCount === 0) reasons.push("no evidence attached");
+    if (r.independentReports < 3)
+      reasons.push(`only ${r.independentReports} independent report(s) — below corroboration threshold`);
+    if (r.freshness !== "Fresh") reasons.push(`freshness is ${r.freshness}`);
+    return reasons.length > 0
+      ? reasons.join("; ")
+      : "incident ranked below top-10 despite being ground-truth high";
+  } else {
+    const reasons: string[] = [];
+    if (r.groundTruthCategory === "duplicate") reasons.push("duplicate reports not fully deduplicated");
+    if (r.groundTruthCategory === "conflicting_evidence") reasons.push("conflicting evidence detected but incident still scored high");
+    if (r.groundTruthCategory === "responder_rejected") reasons.push("responder rejected but ranking not fully suppressed");
+    if (r.groundTruthCategory === "stale") reasons.push("stale report retained elevated priority");
+    if (r.groundTruthCategory === "missing_location") reasons.push("missing location should have reduced priority further");
+    return reasons.length > 0 ? reasons.join("; ") : "edge case retained elevated priority";
+  }
 }
 
 main()

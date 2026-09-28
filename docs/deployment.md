@@ -85,8 +85,8 @@ NODE_ENV=production bun .next/standalone/server.js
 | Seed (19 scenarios) | ✅ VERIFIED | `POST /api/seed` → 19 incidents, 42 reports |
 | All API routes | ✅ VERIFIED | agent-browser QA confirms 200 responses |
 | Evidence upload (secure) | ✅ VERIFIED | magic-byte validation, private storage |
-| Docker build | ⚠️ CONFIGURED, NOT VERIFIED | Dockerfile + compose provided; sandbox cannot run Docker |
-| PostgreSQL connection | ⚠️ CONFIGURED, NOT VERIFIED | schema uses SQLite; postgresql provider documented |
+| **PostgreSQL compatibility** | ✅ **VERIFIED** | `scripts/verify-postgres.ts` — 18 assertions via PGlite (schema, user/RBAC, incident, report, evidence, verification, audit, engine eval, score persistence, 3 categories, CASCADE delete) |
+| Docker build | ⚠️ CONFIGURED, NOT VERIFIED | Dockerfile + compose provided; sandbox has no Docker daemon |
 | Production secrets | ⚠️ DOCUMENTED | `.env.example` provided; production must override |
 
 ## Environment Variables

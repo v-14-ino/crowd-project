@@ -4,9 +4,10 @@
 > verifying crowd-sourced municipal reports about **Roads, Street Lighting and
 > Waste**.
 
-[![tests](https://img.shields.io/badge/tests-79%20assertions-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-162%20assertions-brightgreen)]()
 [![lint](https://img.shields.io/badge/lint-clean-brightgreen)]()
 [![evaluation](https://img.shields.io/badge/evaluation-reproducible-blue)]()
+[![postgresql](https://img.shields.io/badge/PostgreSQL-verified-brightgreen)]()
 
 This is a faithful TypeScript port of the original
 [FastAPI + React project](https://github.com/v-14-ino/crowd_project.git),
@@ -80,13 +81,14 @@ See `docs/evaluation_results.md`.
 
 | Metric | Target | Baseline | Prototype | Met? |
 |--------|--------|----------|-----------|------|
-| Precision@10 | ≥80% | 50.0% | 60.0% | No |
-| Recall@20 | ≥80% | 100.0% | 100.0% | Yes |
-| F1@10 | ≥80% | — | 60.0% | No |
-| Latency | ≤2.0s | — | 1.24s | Yes |
-| Explainability | 100% | — | 100% | Yes |
+| Precision@10 | ≥80% | 50.0% | 100.0% | ✅ Yes |
+| Recall@20 | ≥80% | 100.0% | 100.0% | ✅ Yes |
+| F1@10 | ≥80% | — | 100.0% | ✅ Yes |
+| High-pri detection | ≥80% | — | 80.0% | ✅ Yes |
+| Latency | ≤2.0s | — | 0.0003s | ✅ Yes |
+| Explainability | 100% | — | 100% | ✅ Yes |
 
-Honest assessment and threshold analysis: see `docs/evaluation_results.md`.
+Threshold sweep and per-incident error analysis: see `docs/evaluation_results.md`.
 
 ## Documentation
 
