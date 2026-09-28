@@ -21,6 +21,7 @@ import { MetricsPanel } from "@/components/dashboard/metrics-panel";
 import { AnalyticsPanel } from "@/components/dashboard/analytics-panel";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { DashboardSkeleton } from "@/components/dashboard/skeletons";
+import { ComparisonDialog } from "@/components/dashboard/comparison-dialog";
 import {
   StatusBadge,
   FreshnessBadge,
@@ -45,6 +46,8 @@ import {
   Download,
   PieChart as PieChartIcon,
   Keyboard,
+  GitCompare,
+  XCircle,
 } from "lucide-react";
 import {
   Card,
@@ -99,6 +102,8 @@ export default function Page() {
   const [seeding, setSeeding] = useState(false);
   const [needsSeed, setNeedsSeed] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [selectedForCompare, setSelectedForCompare] = useState<Incident[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -209,6 +214,15 @@ export default function Page() {
   function handleSelect(inc: Incident) {
     setSelected(inc);
     setDrawerOpen(true);
+  }
+
+  function toggleCompare(inc: Incident) {
+    setSelectedForCompare((prev) => {
+      const exists = prev.find((i) => i.id === inc.id);
+      if (exists) return prev.filter((i) => i.id !== inc.id);
+      if (prev.length >= 4) return prev; // max 4
+      return [...prev, inc];
+    });
   }
 
   function handleFilterChange(field: string, value: string) {
@@ -370,6 +384,10 @@ export default function Page() {
             onSelect={handleSelect}
             recentReports={recentReports}
             highPriorityIncidents={highPriorityIncidents}
+            selectedForCompare={selectedForCompare}
+            onToggleCompare={toggleCompare}
+            onOpenCompare={() => selectedForCompare.length >= 2 && setCompareOpen(true)}
+            onClearCompare={() => setSelectedForCompare([])}
           />
         )}
 
@@ -410,6 +428,13 @@ export default function Page() {
         onOpenChange={setDrawerOpen}
         onChanged={() => loadAll(true)}
         responderName={role === "officer" ? "Officer Desai" : ROLE_INFO[role].label}
+      />
+
+      {/* Comparison dialog */}
+      <ComparisonDialog
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        incidents={selectedForCompare}
       />
 
       {/* Keyboard shortcuts overlay */}
@@ -498,6 +523,10 @@ function DashboardView({
   onSelect,
   recentReports,
   highPriorityIncidents,
+  selectedForCompare,
+  onToggleCompare,
+  onOpenCompare,
+  onClearCompare,
 }: {
   role: Role;
   stats: IncidentStats | null;
@@ -511,6 +540,10 @@ function DashboardView({
   onSelect: (i: Incident) => void;
   recentReports: any[];
   highPriorityIncidents: Incident[];
+  selectedForCompare: Incident[];
+  onToggleCompare: (i: Incident) => void;
+  onOpenCompare: () => void;
+  onClearCompare: () => void;
 }) {
   if (loading && incidents.length === 0) {
     return <DashboardSkeleton />;
@@ -642,6 +675,43 @@ function DashboardView({
         filteredCount={incidents.length}
       />
 
+      {/* Compare toolbar */}
+      {selectedForCompare.length > 0 && (
+        <div className="sticky top-[64px] z-20 flex flex-wrap items-center gap-2 rounded-lg border bg-card/95 p-2 shadow-md backdrop-blur">
+          <GitCompare className="h-4 w-4 text-primary" />
+          <span className="text-xs font-semibold">
+            {selectedForCompare.length} selected for comparison
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {selectedForCompare.map((i) => (
+              <Badge key={i.id} variant="outline" className="gap-1 font-mono text-[10px]">
+                {i.incidentId.slice(0, 12)}
+                <button
+                  onClick={() => onToggleCompare(i)}
+                  className="ml-0.5 text-muted-foreground hover:text-rose-600"
+                >
+                  <XCircle className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <div className="ml-auto flex gap-1.5">
+            <Button
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={onOpenCompare}
+              disabled={selectedForCompare.length < 2}
+            >
+              <GitCompare className="h-3 w-3" />
+              Compare ({selectedForCompare.length})
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onClearCompare}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <IncidentQueue
@@ -649,6 +719,8 @@ function DashboardView({
             loading={loading}
             error={error}
             onSelect={onSelect}
+            selectedForCompare={selectedForCompare}
+            onToggleCompare={onToggleCompare}
           />
         </div>
         <div className="lg:col-span-2">

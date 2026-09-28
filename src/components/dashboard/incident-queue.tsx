@@ -20,7 +20,7 @@ import {
 } from "@/components/dashboard/badges";
 import { ISSUE_TYPE_LABELS, type Incident } from "@/lib/types";
 import { timeAgo } from "@/lib/api-client";
-import { AlertCircle, ChevronRight, MapPin, Users, FileImage } from "lucide-react";
+import { AlertCircle, ChevronRight, MapPin, Users, FileImage, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface IncidentQueueProps {
@@ -30,6 +30,8 @@ interface IncidentQueueProps {
   onSelect: (incident: Incident) => void;
   selectedId?: string | null;
   compact?: boolean;
+  selectedForCompare?: Incident[];
+  onToggleCompare?: (incident: Incident) => void;
 }
 
 const rowAccent: Record<string, string> = {
@@ -46,6 +48,8 @@ export function IncidentQueue({
   onSelect,
   selectedId,
   compact,
+  selectedForCompare,
+  onToggleCompare,
 }: IncidentQueueProps) {
   if (loading) {
     return (
@@ -83,6 +87,7 @@ export function IncidentQueue({
           <TableHeader className="sticky top-0 z-10 bg-card">
             <TableRow>
               <TableHead className="w-[34px]"></TableHead>
+              {onToggleCompare && <TableHead className="w-[40px] text-center">Cmp</TableHead>}
               <TableHead className="min-w-[180px]">Incident</TableHead>
               <TableHead className="min-w-[120px]">Status</TableHead>
               <TableHead className="min-w-[120px]">Priority</TableHead>
@@ -105,12 +110,31 @@ export function IncidentQueue({
                   className={cn(
                     "cursor-pointer transition-colors hover:bg-muted/50",
                     rowAccent[inc.priorityLevel] || rowAccent.Low,
-                    selectedId === inc.id && "bg-primary/5"
+                    selectedId === inc.id && "bg-primary/5",
+                    selectedForCompare?.some((s) => s.id === inc.id) && "bg-primary/10"
                   )}
                 >
                   <TableCell className="py-2 text-center text-xs font-bold tabular-nums text-muted-foreground">
                     {idx + 1}
                   </TableCell>
+                  {onToggleCompare && (
+                    <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => onToggleCompare(inc)}
+                        className={cn(
+                          "inline-flex h-5 w-5 items-center justify-center rounded border transition-colors",
+                          selectedForCompare?.some((s) => s.id === inc.id)
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/30 hover:border-primary/50"
+                        )}
+                        title="Toggle compare"
+                      >
+                        {selectedForCompare?.some((s) => s.id === inc.id) && (
+                          <Check className="h-3 w-3" />
+                        )}
+                      </button>
+                    </TableCell>
+                  )}
                   <TableCell className="py-2">
                     <div className="flex flex-col gap-1">
                       <CategoryBadge category={inc.category} issueType={inc.issueType} />

@@ -33,7 +33,7 @@ import {
 } from "@/components/dashboard/badges";
 import { api, formatDateTime, timeAgo } from "@/lib/api-client";
 import { ISSUE_TYPE_LABELS, type IncidentDetail } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
 import {
@@ -48,6 +48,8 @@ import {
   Plus,
   History,
   XCircle,
+  Upload,
+  Loader2,
 } from "lucide-react";
 
 interface Props {
@@ -73,6 +75,9 @@ export function IncidentDrilldown({
   const [evStatus, setEvStatus] = useState("High Quality");
   const [evDetails, setEvDetails] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open || !incidentId) return;
@@ -82,6 +87,47 @@ export function IncidentDrilldown({
       .catch((e) => toast.error(`Failed to load incident: ${e.message}`))
       .finally(() => setLoading(false));
   }, [open, incidentId]);
+
+  // Generate a local object URL preview whenever a file is selected
+  useEffect(() => {
+    if (!uploadFile) {
+      setUploadPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(uploadFile);
+    setUploadPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [uploadFile]);
+
+  async function uploadEvidence() {
+    if (!incidentId || !uploadFile) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", uploadFile);
+      form.append("sourceType", evType);
+      form.append("sourceStatus", evStatus);
+      form.append("details", evDetails || `Uploaded: ${uploadFile.name}`);
+      const res = await fetch(`/api/incidents/${incidentId}/evidence/upload`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Upload failed (${res.status})`);
+      }
+      toast.success("Evidence uploaded — confidence recomputed");
+      const fresh = await api<IncidentDetail>(`/api/incidents/${incidentId}`);
+      setDetail(fresh);
+      setUploadFile(null);
+      setEvDetails("");
+      onChanged?.();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submitVerification() {
     if (!incidentId) return;
@@ -360,37 +406,54 @@ export function IncidentDrilldown({
               {detail.evidence.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No evidence attached yet.</p>
               ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {detail.evidence.map((e) => (
-                    <div key={e.id} className="rounded-md border p-2.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">{e.sourceType}</span>
-                        <Badge
-                          variant="outline"
-                          className={
-                            e.sourceStatus === "Verified" || e.sourceStatus === "High Quality"
-                              ? "border-emerald-300 bg-emerald-100 text-emerald-800"
-                              : e.sourceStatus === "Corrupted"
-                              ? "border-rose-300 bg-rose-100 text-rose-800"
-                              : ""
-                          }
-                        >
-                          {e.sourceStatus}
-                        </Badge>
+                    <div key={e.id} className="overflow-hidden rounded-md border bg-muted/20 transition-colors hover:bg-muted/40">
+                      {e.fileUrl && e.mimeType?.startsWith("image/") ? (
+                        <a href={e.fileUrl} target="_blank" rel="noopener noreferrer" className="block">
+                          <img
+                            src={e.fileUrl}
+                            alt={e.details || e.fileName || "evidence"}
+                            className="h-32 w-full object-cover transition-transform hover:scale-105"
+                          />
+                        </a>
+                      ) : null}
+                      <div className="p-2.5 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate font-semibold">{e.sourceType}</span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              e.sourceStatus === "Verified" || e.sourceStatus === "High Quality"
+                                ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                : e.sourceStatus === "Corrupted"
+                                ? "border-rose-300 bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                                : ""
+                            }
+                          >
+                            {e.sourceStatus}
+                          </Badge>
+                        </div>
+                        {e.details && <p className="mt-1 line-clamp-2 text-muted-foreground" title={e.details}>{e.details}</p>}
+                        <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                          <span className="font-mono" title={e.evidenceId}>{e.evidenceId}</span>
+                          <span>observed {timeAgo(e.observedAt)}</span>
+                        </div>
+                        {e.fileName && (
+                          <p className="mt-0.5 truncate text-[10px] text-muted-foreground/70" title={e.fileName}>
+                            {e.fileName}{e.fileSize ? ` · ${(e.fileSize / 1024).toFixed(0)} KB` : ""}
+                          </p>
+                        )}
                       </div>
-                      {e.details && <p className="mt-1 text-muted-foreground">{e.details}</p>}
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">
-                        observed {timeAgo(e.observedAt)} · {e.evidenceId}
-                      </p>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Attach evidence (simulated) */}
+              {/* Attach evidence — real file upload */}
               <Separator className="my-3" />
               <div className="space-y-2">
-                <p className="text-xs font-semibold">Attach evidence (simulated)</p>
+                <p className="text-xs font-semibold">Attach evidence</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label className="text-[10px]">Source type</Label>
@@ -421,10 +484,53 @@ export function IncidentDrilldown({
                   onChange={(e) => setEvDetails(e.target.value)}
                   className="h-8 text-xs"
                 />
-                <Button size="sm" variant="secondary" onClick={attachEvidence} disabled={busy} className="w-full">
-                  <Plus className="mr-1 h-3 w-3" />
-                  Attach evidence & recompute
-                </Button>
+                {/* File upload dropzone */}
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setUploadFile(f);
+                        if (!evDetails) setEvDetails(`Uploaded: ${f.name}`);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-muted-foreground/30 bg-muted/20 px-3 py-4 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    {uploadFile ? (
+                      <>
+                        {uploadPreview ? (
+                          <img src={uploadPreview} alt="preview" className="mb-1 h-16 w-full rounded object-cover" />
+                        ) : null}
+                        <span className="font-medium text-foreground">{uploadFile.name}</span>
+                        <span className="text-[10px]">{(uploadFile.size / 1024).toFixed(0)} KB · click to change</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5" />
+                        <span className="font-medium">Click to upload image</span>
+                        <span className="text-[10px]">JPEG, PNG, WEBP, GIF · max 10MB</span>
+                      </>
+                    )}
+                  </button>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={uploadEvidence} disabled={busy || !uploadFile} className="flex-1">
+                      {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
+                      Upload & recompute
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={attachEvidence} disabled={busy} className="flex-1">
+                      <Plus className="mr-1 h-3 w-3" />
+                      Simulated
+                    </Button>
+                  </div>
+                </div>
               </div>
             </section>
 

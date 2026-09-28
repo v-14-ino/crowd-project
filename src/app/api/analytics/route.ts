@@ -4,8 +4,13 @@ import { db } from "@/lib/db";
 /**
  * Aggregated analytics for charts: category distribution, status breakdown,
  * priority histogram, freshness distribution, zone heatmap, and trend over time.
+ * Supports optional `days` query param to control the trend window (default 7).
  */
-export async function GET() {
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const daysParam = parseInt(url.searchParams.get("days") || "7", 10);
+  const days = Math.max(1, Math.min(90, isNaN(daysParam) ? 7 : daysParam));
+
   const incidents = await db.incident.findMany({
     include: { evidence: true, responderVerifications: true },
   });
@@ -17,10 +22,10 @@ export async function GET() {
   const byZone: Record<string, number> = {};
   const byConfidenceBucket: Record<string, number> = { High: 0, Medium: 0, Low: 0 };
 
-  // Time trend: incidents created per day (last 7 days)
+  // Time trend: incidents created per day (last `days` days)
   const now = new Date();
   const trend: { date: string; count: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     trend.push({
       date: d.toISOString().slice(0, 10),

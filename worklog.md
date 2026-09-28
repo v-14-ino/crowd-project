@@ -172,3 +172,63 @@ Unresolved / next-phase recommendations:
 - Add date-range filter for analytics trend
 - Consider adding a "compare scenarios" view for the metrics dashboard
 - Could add Leaflet/OpenStreetMap for a real spatial map (currently SVG scatter)
+
+---
+Task ID: CRON-R2 (webDevReview round 2)
+Agent: main
+Task: QA + bug fixes (dark mode) + evidence file upload + date-range filter + incident comparison
+
+Work Log:
+- Reviewed worklog.md (project at 100% + R1 enhancements: analytics, dark mode toggle, CSV export, audit timeline, skeletons)
+- QA via agent-browser: dashboard, analytics, metrics all stable, no console errors
+- VLM analysis identified dark mode bug: toggle cycled light→system→dark, and "system" resolved to light on first click, making it feel broken
+- Lint clean, 29/29 tests pass
+
+Bug fixes:
+- DARK MODE: replaced ambiguous cycle toggle with explicit dropdown menu (Light/Dark/System with checkmark on current). Verified via agent-browser: html class changes to "dark", bg color switches to dark lab, VLM confirmed "Excellent contrast, vibrant badge colors, very good readability"
+
+New features implemented:
+1. EVIDENCE FILE UPLOAD UI (real file upload with preview):
+   - New API: POST /api/incidents/[id]/evidence/upload (multipart, validates MIME/size, saves to /public/uploads/evidence)
+   - Drill-down now has a dropzone with image preview, file size display, and "Upload & recompute" button
+   - Evidence cards now show image thumbnails (click to open full size) + file metadata
+   - Kept "Simulated" button for quick demo without a real file
+2. DATE-RANGE FILTER for analytics:
+   - Analytics API now accepts ?days=N (1-90, default 7)
+   - AnalyticsPanel has a 7/14/30-day toggle that re-fetches the trend
+   - Trend chart title + description update dynamically
+3. INCIDENT COMPARISON VIEW (side-by-side):
+   - New API: GET /api/incidents/compare?ids=INC-a,INC-b,INC-c (up to 4)
+   - ComparisonDialog component: renders N columns with confidence bars, breakdown, priority, stats, recommended action
+   - Incident queue has a new "Cmp" column with checkboxes (max 4)
+   - Sticky compare toolbar shows selected incidents with remove buttons + Compare/Clear actions
+   - Verified compare API returns correct data (3 incidents compared with conf/pri/status)
+
+Styling enhancements:
+- Evidence cards: grid layout with image thumbnails, hover scale, file size display
+- Upload dropzone: dashed border, hover state, image preview
+- Compare toolbar: sticky, backdrop-blur, badge chips with remove buttons
+- Selected compare rows: bg-primary/10 highlight
+- Dark mode dropdown menu with checkmarks
+
+Verification:
+- Dark mode: VLM confirmed "Excellent contrast, vibrant badge colors, very good readability" (was broken in R1)
+- Analytics date range: 7/14/30 day toggle works, trend re-fetches
+- Compare API: returns 3 comparisons with correct confidence/priority/status
+- Evidence upload API: validates file type/size, saves to disk
+- Lint: 0 errors
+- Tests: 29/29 pass
+- No console errors
+
+Stage Summary:
+- Fixed dark mode toggle bug (was the main QA issue)
+- Added 3 major new features: real evidence file upload, date-range filter, incident comparison
+- All new APIs verified working
+- Project remains fully demo-ready with expanded feature set
+
+Unresolved / next-phase recommendations:
+- Add real-time WebSocket updates (currently 15s polling) — would need mini-service on port 3003
+- Add Leaflet/OpenStreetMap for real spatial map (currently SVG scatter)
+- Add saved/named comparison views for recurring workflows
+- Consider adding a "Bulk actions" panel (bulk verify/reject selected incidents)
+- Could add a notification feed for new high-priority incidents

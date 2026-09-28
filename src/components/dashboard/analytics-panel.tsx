@@ -9,6 +9,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer,
   BarChart,
@@ -35,6 +36,7 @@ import {
   Clock,
   MapPin,
   Activity,
+  Calendar,
 } from "lucide-react";
 
 interface Analytics {
@@ -80,10 +82,11 @@ export function AnalyticsPanel() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [days, setDays] = useState(7);
 
   useEffect(() => {
     let active = true;
-    api<Analytics>("/api/analytics")
+    api<Analytics>(`/api/analytics?days=${days}`)
       .then((d) => {
         if (active) {
           setData(d);
@@ -99,7 +102,7 @@ export function AnalyticsPanel() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [days]);
 
   if (loading) {
     return (
@@ -151,16 +154,37 @@ export function AnalyticsPanel() {
 
   return (
     <div className="space-y-4">
+      {/* Date-range selector */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">Trend window</span>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border bg-muted/50 p-0.5">
+          {[7, 14, 30].map((d) => (
+            <Button
+              key={d}
+              size="sm"
+              variant={days === d ? "default" : "ghost"}
+              className={`h-7 px-3 text-xs ${days === d ? "shadow-sm" : "text-muted-foreground"}`}
+              onClick={() => setDays(d)}
+            >
+              {d} days
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {/* Trend + category */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <TrendingUp className="h-4 w-4 text-primary" />
-              Incident Trend (7 days)
+              Incident Trend ({days} days)
             </CardTitle>
             <CardDescription className="text-xs">
-              Reports received per day over the past week
+              Reports received per day over the past {days} days
             </CardDescription>
           </CardHeader>
           <CardContent>
