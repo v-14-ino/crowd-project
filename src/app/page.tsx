@@ -22,6 +22,8 @@ import { AnalyticsPanel } from "@/components/dashboard/analytics-panel";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { DashboardSkeleton } from "@/components/dashboard/skeletons";
 import { ComparisonDialog } from "@/components/dashboard/comparison-dialog";
+import { NotificationFeed } from "@/components/dashboard/notification-feed";
+import { BulkActionsSheet } from "@/components/dashboard/bulk-actions-sheet";
 import {
   StatusBadge,
   FreshnessBadge,
@@ -48,6 +50,7 @@ import {
   Keyboard,
   GitCompare,
   XCircle,
+  RotateCcw,
 } from "lucide-react";
 import {
   Card,
@@ -104,6 +107,7 @@ export default function Page() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState<Incident[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -311,6 +315,7 @@ export default function Page() {
               <Keyboard className="h-3.5 w-3.5" />
             </Button>
             <ThemeToggle />
+            <NotificationFeed stats={stats} incidents={incidents} onSelect={handleSelect} />
             <span className="hidden text-[10px] text-muted-foreground md:inline">View as</span>
             <div className="flex items-center gap-0.5 rounded-lg border bg-muted/50 p-0.5">
               {(Object.keys(ROLE_INFO) as Role[]).map((r) => (
@@ -388,6 +393,7 @@ export default function Page() {
             onToggleCompare={toggleCompare}
             onOpenCompare={() => selectedForCompare.length >= 2 && setCompareOpen(true)}
             onClearCompare={() => setSelectedForCompare([])}
+            onOpenBulk={() => selectedForCompare.length >= 1 && setBulkOpen(true)}
           />
         )}
 
@@ -435,6 +441,18 @@ export default function Page() {
         open={compareOpen}
         onOpenChange={setCompareOpen}
         incidents={selectedForCompare}
+      />
+
+      {/* Bulk actions sheet */}
+      <BulkActionsSheet
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        incidents={selectedForCompare}
+        onDone={() => {
+          setSelectedForCompare([]);
+          loadAll(true);
+        }}
+        responderName={role === "officer" ? "Officer Desai" : ROLE_INFO[role].label}
       />
 
       {/* Keyboard shortcuts overlay */}
@@ -527,6 +545,7 @@ function DashboardView({
   onToggleCompare,
   onOpenCompare,
   onClearCompare,
+  onOpenBulk,
 }: {
   role: Role;
   stats: IncidentStats | null;
@@ -544,6 +563,7 @@ function DashboardView({
   onToggleCompare: (i: Incident) => void;
   onOpenCompare: () => void;
   onClearCompare: () => void;
+  onOpenBulk: () => void;
 }) {
   if (loading && incidents.length === 0) {
     return <DashboardSkeleton />;
@@ -580,6 +600,40 @@ function DashboardView({
           </div>
         </div>
         <KpiCards stats={stats} activeFilter={filters} onCardClick={onKpiClick} />
+
+        {/* Quick-filter chips */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Quick filters:
+          </span>
+          {CATEGORY_OPTIONS.map((cat) => {
+            const active = filters.category === cat;
+            const count = incidents.filter((i) => i.category === cat).length;
+            return (
+              <button
+                key={cat}
+                onClick={() => onFilterChange("category", active ? "All" : cat)}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all hover:scale-105 ${
+                  active
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {cat}
+                <span className={`rounded-full px-1 text-[9px] ${active ? "bg-primary-foreground/20" : "bg-muted"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+          <button
+            onClick={onReset}
+            className="ml-1 inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </button>
+        </div>
       </section>
 
       {/* High-priority surfacing band */}
@@ -696,6 +750,16 @@ function DashboardView({
             ))}
           </div>
           <div className="ml-auto flex gap-1.5">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 gap-1 text-xs"
+              onClick={onOpenBulk}
+              disabled={selectedForCompare.length < 1}
+            >
+              <ShieldCheck className="h-3 w-3" />
+              Bulk action ({selectedForCompare.length})
+            </Button>
             <Button
               size="sm"
               className="h-7 gap-1 text-xs"

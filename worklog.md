@@ -232,3 +232,73 @@ Unresolved / next-phase recommendations:
 - Add saved/named comparison views for recurring workflows
 - Consider adding a "Bulk actions" panel (bulk verify/reject selected incidents)
 - Could add a notification feed for new high-priority incidents
+
+---
+Task ID: CRON-R3 (webDevReview round 3)
+Agent: main
+Task: QA + toast fix + bulk actions + notification feed + quick-filter chips + print report + animated counters
+
+Work Log:
+- Reviewed worklog.md (project stable after R1+R2: analytics, dark mode, CSV export, audit timeline, evidence upload, date-range filter, incident comparison)
+- QA via agent-browser: dashboard, analytics, metrics all stable, no console errors
+- VLM analysis: dashboard 8/10. Identified: toast notification overlaps search bar, opportunities for bulk actions, notification feed, quick filters, print report, animated counters
+- Lint clean, 29/29 tests pass
+
+Bug fixes:
+- TOAST POSITIONING: moved Sonner toaster down (top: 56px) so it no longer overlaps the search bar / filter row
+
+New features implemented:
+1. BULK ACTIONS PANEL (BulkActionsSheet):
+   - New API: POST /api/incidents/bulk-verify (apply VERIFY/REJECT/ESCALATE to multiple incidents at once)
+   - Side sheet with decision selector, rationale, responder name, summary
+   - Accessible from the compare toolbar ("Bulk action" button, enabled when 1+ selected)
+   - Each incident's confidence recomputed immediately, audit log entry added
+2. NOTIFICATION FEED (NotificationFeed):
+   - Bell icon in header with red badge count of new high-priority incidents
+   - Popover with scrollable list of new high-priority incidents since last visit
+   - "last seen" timestamp stored in localStorage
+   - "Mark all as seen" button + click-to-open-drilldown
+   - Empty state: "You're all caught up"
+3. QUICK-FILTER CHIPS on dashboard:
+   - Roads / Street Lighting / Waste chips with live incident counts
+   - Active chip highlighted with primary color
+   - Reset button to clear all filters
+4. PRINT / PDF REPORT for incident drill-down:
+   - "Print" button in drill-down header
+   - Print styles in globals.css (hides nav/buttons, white bg, static dialog)
+   - Uses window.print() → user can save as PDF
+5. ANIMATED KPI COUNTERS:
+   - AnimatedCounter component (requestAnimationFrame, easeOutCubic, IntersectionObserver)
+   - KPI cards now count up from 0 to value on first visibility
+   - Hover lift + icon scale on KPI cards
+
+Styling enhancements:
+- KPI cards: hover -translate-y-0.5, shadow-lg, icon scale-110 on hover, animated counters
+- Quick-filter chips: rounded-full, hover scale-105, live count badges
+- Compare toolbar: now includes "Bulk action" button alongside Compare/Clear
+- Print styles: clean black-on-white report layout
+- globals.css: cv-fade-in animation, cv-kpi-sheen gradient sweep, cv-stagger delays
+
+Verification:
+- Bulk-verify API: tested — "Bulk REJECT applied to 1/1 incidents succeeded: 1 failed: 0"
+- Notification feed: bell icon opens popover, "You're all caught up" empty state
+- Quick-filter chips: Roads/Street Lighting/Waste with counts (8/5/6), click filters incidents
+- Print button: present in drill-down header
+- Evidence upload: dropzone with "Click to upload image · JPEG, PNG, WEBP, GIF · max 10MB"
+- VLM dashboard rating: 9/10 (up from 8/10 in R2) — "highly functional, visually clean, information-dense"
+- Lint: 0 errors
+- Tests: 29/29 pass
+- No console errors
+
+Stage Summary:
+- Fixed toast positioning overlap bug
+- Added 5 major new features: bulk actions, notification feed, quick-filter chips, print report, animated counters
+- VLM-confirmed dashboard rating improved to 9/10
+- Project remains fully demo-ready with comprehensive feature set
+
+Unresolved / next-phase recommendations:
+- Add real-time WebSocket updates (currently 15s polling) — would need mini-service on port 3003
+- Add Leaflet/OpenStreetMap for real spatial map (currently SVG scatter)
+- Add saved/named filter presets for recurring workflows
+- Consider adding a "scenario library" — save and re-run custom seed scenarios
+- Could add a public-facing citizen portal page (separate from officer dashboard)

@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { AnimatedCounter } from "@/components/dashboard/animated-counter";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -161,7 +162,7 @@ export function KpiCards({ stats, activeFilter, onCardClick }: KpiCardsProps) {
             key={c.key}
             onClick={() => onCardClick(c.filterType, c.filterVal)}
             className={cn(
-              "text-left transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "group text-left transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               c.accent
             )}
             style={{
@@ -169,17 +170,20 @@ export function KpiCards({ stats, activeFilter, onCardClick }: KpiCardsProps) {
               borderRadius: "calc(var(--radius))",
             }}
           >
-            <Card className={cn("h-full p-3 shadow-sm", isActive && "ring-2 ring-primary/40")}>
+            <Card className={cn("h-full p-3 shadow-sm transition-shadow group-hover:shadow-md", isActive && "ring-2 ring-primary/40")}>
               <div className="flex items-center justify-between gap-2">
                 <span
                   className={cn(
-                    "inline-flex h-7 w-7 items-center justify-center rounded-md",
+                    "inline-flex h-7 w-7 items-center justify-center rounded-md transition-transform group-hover:scale-110",
                     c.iconBg
                   )}
                 >
                   {c.icon}
                 </span>
-                <span className="text-2xl font-bold tabular-nums">{c.value}</span>
+                <AnimatedCounter
+                  value={c.value}
+                  className="text-2xl font-bold tabular-nums"
+                />
               </div>
               <p className="mt-2 text-xs font-medium leading-tight text-muted-foreground">
                 {c.label}

@@ -50,6 +50,7 @@ import {
   XCircle,
   Upload,
   Loader2,
+  Printer,
 } from "lucide-react";
 
 interface Props {
@@ -183,6 +184,16 @@ export function IncidentDrilldown({
                 <span className="font-mono text-sm text-muted-foreground">
                   {detail.incidentId}
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto h-7 gap-1 text-xs"
+                  onClick={() => window.print()}
+                  title="Print / Save as PDF"
+                >
+                  <Printer className="h-3 w-3" />
+                  Print
+                </Button>
               </>
             ) : (
               "Loading incident..."
