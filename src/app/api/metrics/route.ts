@@ -194,15 +194,55 @@ export async function GET() {
     p10: 80,
     p20: 75,
     recall: 80,
+    f1: 80,
     latencyMs: 2000,
     explainability: 100,
+    highPriDetection: 80,
   };
+
+  // F1 @ 10
+  const propF1_10 =
+    propP10 + propRecall > 0 ? (2 * propP10 * propRecall) / (propP10 + propRecall) : 0;
+
+  // Threshold sweep (confidence 0-100, step 10)
+  const thresholdSweep: Array<{
+    threshold: number;
+    tp: number;
+    fp: number;
+    fn: number;
+    tn: number;
+    precision: number;
+    recall: number;
+    f1: number;
+  }> = [];
+  for (let t = 0; t <= 100; t += 10) {
+    const pos = evalList.filter((e) => e.evaluation.confidenceScore >= t);
+    const neg = evalList.filter((e) => e.evaluation.confidenceScore < t);
+    const stp = pos.filter((e) => e.groundTruthVerified).length;
+    const sfp = pos.filter((e) => !e.groundTruthVerified).length;
+    const sfn = neg.filter((e) => e.groundTruthVerified).length;
+    const stn = neg.filter((e) => !e.groundTruthVerified).length;
+    const sp = pos.length > 0 ? stp / pos.length : 0;
+    const sr = totalTrueHigh > 0 ? stp / totalTrueHigh : 0;
+    thresholdSweep.push({
+      threshold: t,
+      tp: stp,
+      fp: sfp,
+      fn: sfn,
+      tn: stn,
+      precision: sp,
+      recall: sr,
+      f1: sp + sr > 0 ? (2 * sp * sr) / (sp + sr) : 0,
+    });
+  }
 
   return NextResponse.json({
     summary: {
       totalReports: evalList.reduce((a, e) => a + e.reports.length, 0),
       totalIncidents: evalList.length,
       verifiedIncidents: evalList.filter((e) => e.evaluation.status === "Verified").length,
+      rejectedIncidents: evalList.filter((e) => e.evaluation.status === "Rejected").length,
+      pendingIncidents: evalList.filter((e) => e.evaluation.status === "Pending").length,
       incorrectlyVerifiedReports: incorrectlyVerified,
       falsePositives,
       falseNegatives,
@@ -223,6 +263,7 @@ export async function GET() {
       p10: propP10,
       p20: propP20,
       recall: propRecall,
+      f1at10: propF1_10,
       meanRank: propRank.mean,
       medianRank: propRank.median,
       totalLatencyMs: totalLatency,
@@ -234,9 +275,12 @@ export async function GET() {
       p10: propP10 * 100 >= targets.p10,
       p20: propP20 * 100 >= targets.p20,
       recall: propRecall * 100 >= targets.recall,
+      f1: propF1_10 * 100 >= targets.f1,
       latency: totalLatency <= targets.latencyMs / 1000,
       explainability: explainabilityPerc >= targets.explainability,
+      highPriDetection: highPriorityDetectionRate >= targets.highPriDetection,
     },
+    thresholdSweep,
     perIncident: proposedRanked.map((e, idx) => ({
       rank: idx + 1,
       incidentId: e.incident.incidentId,

@@ -1,49 +1,90 @@
-# Final Project Requirement Audit
+# Final Requirements Audit
 
-**Project:** Municipality Crowd Verification System
-**Goal:** “Solving Decision-Makers Cannot Verify Crowd-Sourced Reports Quickly in Municipality Receiving Complaints About Roads Lighting Waste”
+> **Requirement → Implementation → File/API/UI → Test/Evidence**
+>
+> All evidence is from the ACTUAL implemented system (not planned).
+> Generated: 2026-09-28. Test count: 79 assertions (29 engine + 50 failure
+> scenarios). Evaluation: `scripts/evaluate.ts` against real DB.
 
-## Requirement Audit Matrix
+## Traceability Matrix
 
-| Requirement | Implemented Feature | Relevant File/Component | Evidence/Test/Document | Status | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| municipality road/lighting/waste complaints | Reports accept specific category Enums. | `models/models.py`, `schemas/report.py` | Unit tests; UI Badges. | **COMPLETE** | Fully enforced via Pydantic schemas. |
-| fast verification for decision-makers | Automated confidence & priority calculation on submission. | `services/verification_engine.py` | Tested in `test_verification_engine.py`. | **COMPLETE** | Incident queue surfaces top priorities instantly. |
-| crowd-report verification and confidence dashboard | Unified Officer Dashboard with Priority Queue. | `Dashboard.jsx`, `IncidentQueue.jsx` | Full React/Vite implementation. | **COMPLETE** | Live queue with confidence scores. |
-| disaster coordination use case | Prioritization of "Critical" severity incidents. | `VerificationEngine.calculate_priority()` | Prioritization logic. | **PARTIAL** | High-priority incidents are surfaced, but no explicit "Disaster Mode" workflow exists. |
-| simulated citizen reports | Data seeding script. | `seed.py` | Database contains `RPT-` generated reports. | **COMPLETE** | Script populates SQLite DB. |
-| location | Latitude/longitude capture and explicit tracking. | `schemas/report.py`, `IncidentMap.jsx` | `test_missing_location` test case. | **COMPLETE** | |
-| time/freshness | Fresh, Aging, Stale computation logic. | `VerificationEngine.determine_freshness()` | Evaluated via `test_stale_report`. | **COMPLETE** | |
-| corroborating sources | External Evidence management & deduplication. | `api/evidence.py`, `EvidenceSection.jsx` | `test_evidence_management.py`. | **COMPLETE** | Independent sensors/photos boost confidence. |
-| responder verification | Phase 2 manual Verify/Reject/Escalate logic. | `api/incidents.py`, `ResponderVerificationSection.jsx` | `test_phase2_verification.py`. | **COMPLETE** | Overrides confidence dynamically. |
-| non-technical explainability | Text-based audit explanations for scores. | `VerificationEngine` (`confidence_explanations`) | Explanations rendered in `IncidentDrilldown.jsx`. | **COMPLETE** | Fully transparent rule tracing. |
-| verified high-priority reports surfaced quickly | Incident Queue sorted by priority descending. | `IncidentQueue.jsx`, backend `get_incidents` | Priority score algorithm. | **COMPLETE** | |
-| role-based views | Citizen Tracking View vs Officer Dashboard. | `CitizenTracking.jsx`, `Dashboard.jsx`, `auth.py` | JWT authentication and segregated routing. | **COMPLETE** | Prototype uses simple JWT; lacks production enterprise RBAC. |
-| drill-down evidence | Detailed view per incident with evidence attachments. | `IncidentDrilldown.jsx`, `api/evidence.py` | UI allows expanding incidents to view files. | **COMPLETE** | |
-| freshness indicators | UI Badges (Fresh/Aging/Stale). | `FilterBar.jsx`, `RecentReportsSection.jsx` | Colors map to backend freshness states. | **COMPLETE** | |
-| missing/stale data states | Explicit UI warnings and engine penalties for missing data. | `VerificationEngine`, UI components | `test_evidence_management.py` edge cases. | **COMPLETE** | Never silently hides data. |
-| low-cost/open/simulated infrastructure | SQLite database, FastAPI, Vite. | `database/connection.py`, `main.py` | Entire system runs locally without heavy cloud dependency. | **COMPLETE** | |
-| baseline | Basic severity + recency baseline defined. | `evaluate_system.py` | Baseline metric calculations in script. | **COMPLETE** | |
-| end-to-end working prototype | Full stack React + Python application. | `frontend/`, `backend/` | Application builds and runs. | **COMPLETE** | |
-| at least 3 edge/failure cases | Handled missing loc, conflicting data, missing evidence, stale, rejection. | `services/verification_engine.py` | Explicitly validated via test suite. | **COMPLETE** | Handled 6 unique edge cases. |
-| measurable experiment | Python evaluation script executing automated test. | `evaluate_system.py` | Output is measurable and reproducible. | **COMPLETE** | |
-| validation dataset | Simulated dataset of 30 incidents with varied edge cases. | `evaluate_system.py` (`simulate_data()`) | Validation targets coded into script. | **COMPLETE** | |
-| metrics | P@10, P@20, Recall, Ranking Quality, Time, Explainability, Faults. | `evaluate_system.py`, `docs/evaluation_results.md` | Script calculates each specific metric. | **COMPLETE** | Actual values exist for all required metrics. |
-| baseline/target/measured result/error analysis | Comparison table and written error analysis. | `docs/evaluation_results.md` | Document contains baseline vs proposed system comparison. | **COMPLETE** | |
-| stakeholder/user validation | Validation package and questionnaire created. | `docs/stakeholder_validation.md` | Documents exist, but results are pending. | **PARTIAL** | Pending actual participant testing. |
-| requirements specification | Formal PRD/requirements document. | `docs/requirements_specification.md` | File outlines all functional/non-functional needs. | **COMPLETE** | |
-| prototype screens | Fully coded frontend screens. | `frontend/src/pages/` | Dashboard, Drilldown, and Tracking pages. | **COMPLETE** | |
-| core algorithm/rules | Explicit rule-based `VerificationEngine`. | `backend/services/verification_engine.py` | Deduplication, scaling, scoring logic implemented. | **COMPLETE** | |
-| API/integration stub | FastAPI backend routes. | `backend/api/` | Routers for reports, incidents, evidence. | **COMPLETE** | |
-| limitations report | Document covering prototype and deployment limits. | `docs/limitations.md` | Explicitly covers security, data, and infrastructure limits. | **COMPLETE** | |
-| final demonstration readiness | Code passes tests and builds cleanly. | Entire repository | `pytest` and `npm run build` succeed. | **COMPLETE** | Ready for stakeholder presentation. |
+| # | Requirement | Implementation | File / API / UI | Test / Evidence | Status |
+|---|-------------|----------------|-----------------|------------------|--------|
+| 1 | Municipal categories (Roads/Lighting/Waste) | Explicit enum + 9 issue types | `lib/types.ts`, `lib/seed.ts`, Report form, Filter chips | Tests Case 11; seed has all 3×3 | ✅ COMPLETE |
+| 2 | Citizen reports + location + timestamp + severity | Report submission with GPS | `api/reports`, `report-form.tsx` | `POST /api/reports` 201 | ✅ COMPLETE |
+| 3 | Spatial correlation | Haversine ≤200m, ≤60min, same cat+issue | `lib/correlation.ts` | Test Case 9 (haversine) | ✅ COMPLETE |
+| 4 | Corroborating sources + deduplication | Dedup ≤25m/≤10min | `lib/verification-engine.ts` clusterIndependentReports | Test Case 1 (10→1 unique) | ✅ COMPLETE |
+| 5 | Evidence management | Upload (secure), attach, list, delete | `api/incidents/[id]/evidence`, `api/uploads/evidence/[name]` | Magic-byte validation verified | ✅ COMPLETE |
+| 6 | Responder verification (Verify/Reject/Escalate) | Overrides confidence | `api/incidents/[id]/verification`, bulk-verify | Tests Case 7, 7b | ✅ COMPLETE |
+| 7 | Confidence score (0–100) + explainable | Structured breakdown + human summary | `lib/verification-engine.ts` calculateConfidence | Drill-down verified; 100% explainability | ✅ COMPLETE |
+| 8 | Priority score | Severity + corroboration + confidence + freshness | `lib/verification-engine.ts` calculatePriority | Test Case 12 (Critical 96) | ✅ COMPLETE |
+| 9 | Freshness (Fresh/Aging/Stale) | ≤24h / 24–72h / >72h | `lib/verification-engine.ts` determineFreshness | Test Case 10 (boundaries) | ✅ COMPLETE |
+| 10 | Operational states (11 states) | VERIFIED, HIGH_PRIORITY, PRIORITIZE, PENDING_VERIFICATION, FRESH, AGING, STALE, MISSING_LOCATION, MISSING_EVIDENCE, CONFLICTING_EVIDENCE, INSUFFICIENT_DATA, REJECTED | `lib/verification-engine.ts` determineOperationalStates | Tests Cases 1–8; surfaced in UI | ✅ COMPLETE |
+| 11 | Edge: duplicate reports | Dedup prevents inflation | clusterIndependentReports | Test Case 1 | ✅ COMPLETE |
+| 12 | Edge: stale report | Freshness penalty −30, STALE | determineFreshness + priority | Test Case 2 | ✅ COMPLETE |
+| 13 | Edge: missing location | −30 confidence, MISSING_LOCATION | calculateConfidence + states | Test Case 3 | ✅ COMPLETE |
+| 14 | Edge: conflicting evidence | −40, Conflicted status | calculateConfidence + determineVerificationStatus | Test Case 4 | ✅ COMPLETE |
+| 15 | Edge: missing/corrupt evidence | MISSING_EVIDENCE, INSUFFICIENT_DATA | determineOperationalStates | Test Case 5 | ✅ COMPLETE |
+| 16 | Edge: corroboration unavailable | Single-report confidence, Pending | calculateConfidence | Test Case 6 | ✅ COMPLETE |
+| 17 | Edge: responder rejection | Confidence 0, Rejected | calculateConfidence override | Test Case 7 | ✅ COMPLETE |
+| 18 | Edge: empty/API failure | Unknown status, graceful | evaluateIncident([]) | Test Case 8 | ✅ COMPLETE |
+| 19 | Role-based views (Citizen/Officer/Coordinator/Admin) | Tab gating + role session | `app/page.tsx` ROLE_TABS, `api/auth/session` | agent-browser verified role switch | ✅ COMPLETE |
+| 20 | High-priority surfacing | Queue band + priority sort + notifications | `page.tsx`, `api/incidents` order by priorityScore | "10 incidents need attention" | ✅ COMPLETE |
+| 21 | Drill-down view | Full detail + breakdown + timeline | `incident-drilldown.tsx`, `api/incidents/[id]` | agent-browser verified | ✅ COMPLETE |
+| 22 | Metrics dashboard (baseline/target/measured) | Live evaluation | `api/metrics`, `metrics-panel.tsx` | Real metrics from `scripts/evaluate.ts` | ✅ COMPLETE |
+| 23 | Baseline → Target → Measured | Comparison table + error analysis | `metrics-panel.tsx`, `docs/evaluation_results.md` | Real: P@10 50→60%, recall 100% | ✅ COMPLETE |
+| 24 | Precision-Recall analysis | Threshold sweep (0–100, step 10) | `api/metrics` thresholdSweep, `scripts/evaluate.ts` | Real sweep in evaluation_output.json | ✅ COMPLETE |
+| 25 | Reproducible simulated experiment | 19 scenarios + ground truth | `lib/seed.ts`, `api/seed` | `POST /api/seed` → 19 incidents | ✅ COMPLETE |
+| 26 | F1 score | Computed at @10 + per-threshold | `api/metrics`, `scripts/evaluate.ts` | Real: F1@10=60%, optimal 90% at t=20 | ✅ COMPLETE |
+| 27 | False positives / false negatives | Computed vs ground truth | `api/metrics`, `scripts/evaluate.ts` | Real: FP=0, FN=9 at t=70 | ✅ COMPLETE |
+| 28 | Verification latency | Measured per incident | `scripts/evaluate.ts` | Real: 1.24s total, 0.065ms avg | ✅ COMPLETE |
+| 29 | Freshness classification accuracy | Engine vs persisted | `api/metrics` | Real: 100% | ✅ COMPLETE |
+| 30 | Explainable decisions | Structured +points + human summary | `lib/verification-engine.ts` | 100% explainability | ✅ COMPLETE |
+| 31 | CSV export | Download all incidents | `api/incidents/export` | CSV header verified | ✅ COMPLETE |
+| 32 | Bulk actions | Verify/reject/escalate multiple | `api/incidents/bulk-verify`, `bulk-actions-sheet.tsx` | API tested: 1/1 succeeded | ✅ COMPLETE |
+| 33 | Notification feed | New high-pri since last visit | `notification-feed.tsx` | agent-browser verified | ✅ COMPLETE |
+| 34 | Evidence file upload (secure) | Magic bytes + ext allowlist + private storage | `api/incidents/[id]/evidence/upload`, `api/uploads/evidence/[name]` | Security audit complete | ✅ COMPLETE |
+| 35 | Print/PDF report | window.print + print styles | `incident-drilldown.tsx`, `globals.css` | Print button verified | ✅ COMPLETE |
+| 36 | Tests | 79 assertions | `tests/verification-engine.test.ts` (29), `tests/failure-scenarios.test.ts` (50) | All pass | ✅ COMPLETE |
+| 37 | Lint clean | ESLint 0 errors | `bun run lint` | Verified | ✅ COMPLETE |
+| 38 | Reproducible evaluation script | `scripts/evaluate.ts` | Writes JSON + markdown | Real metrics captured | ✅ COMPLETE |
+| 39 | .env.example | Documented config | `.env.example` | Created | ✅ COMPLETE |
+| 40 | Docker deployment | Dockerfile + docker-compose | `Dockerfile`, `docker-compose.yml` | Configured, NOT verified in sandbox | ⚠️ PARTIAL |
+| 41 | Stakeholder validation | Template + mechanism | `docs/validation.md` | PENDING — no real sessions | ⚠️ PARTIAL |
+| 42 | PostgreSQL support | Schema provider switch documented | `prisma/schema.prisma`, `docs/deployment.md` | NOT verified in sandbox | ⚠️ PARTIAL |
 
-## Audit Summary
+## Summary
 
-- **Total COMPLETE:** 28
-- **Total PARTIAL:** 2
-- **Total MISSING:** 0
+- **COMPLETE**: 39 / 42
+- **PARTIAL**: 3 (Docker, stakeholder validation, PostgreSQL — all environment-dependent or require real participants)
+- **MISSING**: 0
 
-### Items Requiring Action:
-1. **Disaster Coordination Use Case (Partial):** System currently relies heavily on standard "Critical" priorities to handle large influxes. To fully complete this, a specialized "Disaster Mode" or explicit emergency broadcast mechanism could be added in the future.
-2. **Stakeholder Validation (Partial):** The protocol and questionnaires are defined in `docs/stakeholder_validation.md`, but no actual municipal participants have executed the test yet. Formal validation sessions must be scheduled to complete this requirement.
+## Honest Measurement Results (from `scripts/evaluate.ts`)
+
+| Metric | Target | Baseline | Prototype | Met? |
+|--------|--------|----------|-----------|------|
+| Precision@10 | ≥80% | 50.0% | 60.0% | ❌ No |
+| Precision@20 | ≥75% | 52.6% | 52.6% | ❌ No |
+| Recall@20 | ≥80% | 100.0% | 100.0% | ✅ Yes |
+| F1@10 | ≥80% | — | 60.0% | ❌ No |
+| High-pri detection | ≥80% | — | 70.0% | ❌ No |
+| Latency | ≤2.0s | — | 1.24s | ✅ Yes |
+| Explainability | 100% | — | 100% | ✅ Yes |
+
+**Honest assessment**: Precision/F1 targets are NOT met at the operational
+threshold of 70. The threshold sweep reveals the optimal F1 (90%) is at
+threshold 20–30. The system is deliberately conservative (threshold 70 =
+Corroborated = ready for field verification). Lowering the threshold would
+improve recall/F1 but increase false positives. See `docs/evaluation_results.md`
+for the full analysis.
+
+## Commands to Verify
+
+```bash
+bun run lint                                  # ESLint — 0 errors
+bunx tsx tests/verification-engine.test.ts     # 29 assertions pass
+bunx tsx tests/failure-scenarios.test.ts       # 50 assertions pass
+bunx tsx scripts/evaluate.ts --reseed          # Reproducible evaluation
+bun run dev                                    # → http://localhost:3000
+curl -X POST http://localhost:3000/api/seed    # Seed 19 scenarios
+```

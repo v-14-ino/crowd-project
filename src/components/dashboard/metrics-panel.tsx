@@ -248,7 +248,7 @@ export function MetricsPanel({ onSeed }: { onSeed?: () => void }) {
         <StatCard icon={<XCircle className="h-4 w-4" />} label="False negatives" value={data.summary.falseNegatives} accent="text-rose-600" />
         <StatCard icon={<TrendingUp className="h-4 w-4" />} label="High-pri detection" value={`${data.summary.highPriorityDetectionRate.toFixed(0)}%`} />
         <StatCard icon={<Gauge className="h-4 w-4" />} label="Verification accuracy" value={`${data.summary.verificationAccuracy.toFixed(0)}%`} />
-        <StatCard icon={<Clock className="h-4 w-4" />} label="Median verify time" value={`${data.summary.medianVerificationTimeSec.toFixed(1)}s`} />
+        <StatCard icon={<Clock className="h-4 w-4" />} label="Median verify time (sim)" value={data.summary.medianVerificationTimeSec > 0 ? `${(data.summary.medianVerificationTimeSec / 60).toFixed(1)} min` : "—"} />
         <StatCard icon={<Sparkles className="h-4 w-4" />} label="Freshness accuracy" value={`${data.summary.freshnessClassificationAccuracy.toFixed(0)}%`} />
         <StatCard icon={<Database className="h-4 w-4" />} label="Total incidents" value={data.summary.totalIncidents} />
       </div>

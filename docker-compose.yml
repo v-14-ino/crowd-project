@@ -1,0 +1,51 @@
+# Municipal Crowd-Report Verification & Confidence Dashboard
+# Docker Compose: Next.js app + PostgreSQL (production-ready)
+#
+# Usage:
+#   docker compose up --build
+#
+# The app connects to PostgreSQL. Switch the Prisma provider to postgresql
+# in prisma/schema.prisma and set DATABASE_URL accordingly (already wired below).
+#
+# NOTE: Full Docker deployment is NOT verified in the sandbox environment
+# (single-port limitation). See docs/deployment.md for verification status.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crowduser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crowdpass}
+      POSTGRES_DB: crowdverif
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crowduser -d crowdverif"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # PostgreSQL connection (switch provider in schema.prisma to "postgresql")
+      DATABASE_URL: "postgresql://crowduser:${POSTGRES_PASSWORD:-crowdpass}@db:5432/crowdverif?schema=public"
+      SESSION_SECRET: "${SESSION_SECRET:-change-me-in-production}"
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    volumes:
+      - evidence_storage:/app/storage/evidence
+
+volumes:
+  pgdata:
+  evidence_storage:
